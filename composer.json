@@ -1,5 +1,5 @@
 {
-    "name" : "futoin/core-php-ri",
+    "name" : "futoin/core-php-ri-asyncsteps",
     "version" : "0.99",
     "description" : "FutoIn Core Reference Implementation for PHP - AsyncSteps",
     "authors" : [
