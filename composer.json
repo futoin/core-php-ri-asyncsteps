@@ -1,0 +1,37 @@
+{
+    "name" : "futoin/core-php-ri",
+    "version" : "0.99",
+    "description" : "FutoIn Core Reference Implementation for PHP - AsyncSteps",
+    "authors" : [
+        {
+            "name" : "Andrey Galkin",
+            "email" : "andrey@futoin.eu"
+        }
+    ],
+    "license" : "Apache-2.0",
+    "homepage" : "http://futoin.org",
+    "require" : {
+        "php" : ">=5.5",
+        "futoin/core-php-api" : "@dev",
+        "psr/log": ">=1.0.0"
+    },
+    "require-dev" : {
+        "phpunit/phpunit": ">=4.1",
+        "phpunit/php-invoker": "*",
+        "monolog/monolog": "1.*"
+    },
+    "provide" : {
+        "futoin/core-php" : "1.*"
+    },
+    "repositories" : [
+        {
+            "type": "vcs",
+            "url": "ssh://git@cfvcs/futoin/core-php-api"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "FutoIn\\RI\\": "src/"
+        }
+    }
+}
