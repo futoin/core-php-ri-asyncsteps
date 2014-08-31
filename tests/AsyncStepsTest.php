@@ -897,4 +897,52 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $this->assertNoEvents();
     }
 
+    public function testDerivedClasses()
+    {
+        $as = $this->as = new ASTestImpl();
+        
+        $as->as_test_used = false;
+        $as->asp_test_used = false;
+        
+        $as->add(
+            function($as){
+                $this->assertFalse( $as->as_test_used, "ASTestImpl is called" );
+                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
+                $as->asp_test_used = false;
+                
+                $p = $as->parallel();
+                $p->add(
+                    function( $as )
+                    {
+                        $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
+                        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
+                    }
+                );
+            }
+        );
+        
+        $as->execute();
+        AsyncToolTest::nextEvent();
+        $this->assertNoEvents();
+    }
+}
+
+class ASTestImpl extends \FutoIn\RI\AsyncSteps
+{
+    public function __construct( $state=null )
+    {
+        parent::__construct( $state );
+        $this->state()->{self::STATE_ASP_CLASS} = __NAMESPACE__.'\\ASPTestImpl';
+        $this->state()->as_test_used = true;
+    }
+}
+
+class ASPTestImpl extends \FutoIn\RI\Details\AsyncStepsProtection
+{
+    public function __construct( $parent, &$adapter_stack )
+    {
+        parent::__construct( $parent, $adapter_stack );
+        $this->state()->asp_test_used = true;
+    }
+
 }
