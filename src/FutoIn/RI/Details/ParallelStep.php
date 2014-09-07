@@ -1,11 +1,17 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
 
 namespace FutoIn\RI\Details;
 
 
 /**
- * \brief Internal class to organize Parallel step execution
- * \warning: DO NOT use directly
+ * Internal class to organize Parallel step execution
+ *
+ * @internal Do not use directly, not standard API
  */
 class ParallelStep
     implements \FutoIn\AsyncSteps
@@ -81,7 +87,10 @@ class ParallelStep
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
     
-    //! \note DO NOT use directly
+    /**
+     * @ignore Do not use directly, not standard API
+     * @internal
+     */
     public function executeParallel($as)
     {
         $root = $as->getRoot();
@@ -131,7 +140,10 @@ class ParallelStep
         }
     }
     
-    //! \note DO NOT use directly
+    /**
+     * @ignore Do not use directly
+     * @internal
+     */
     public function cancel()
     {
         foreach ( $this->parallel_steps_ as $s )

@@ -1,7 +1,15 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+  */
 
 use \FutoIn\RI\AsyncToolTest as AsyncToolTest;
 
+/**
+ * @ignore
+ */
 class AsyncStepsTest extends PHPUnit_Framework_TestCase
 {
     private $as = null;

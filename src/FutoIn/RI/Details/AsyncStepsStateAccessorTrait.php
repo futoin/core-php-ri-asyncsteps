@@ -1,15 +1,20 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
 
 namespace FutoIn\RI\Details;
 
 /**
- * \brief PHP-specific state() accessor trait
+ * PHP-specific state() accessor trait
  * \warning: DO NOT use directly
  */
 trait AsyncStepsStateAccessorTrait
 {
     /**
-     * \brief state() access through AsyncSteps interface / set value
+     * state() access through AsyncSteps interface / set value
      */
     public function __set( $name, $value )
     {
@@ -17,7 +22,7 @@ trait AsyncStepsStateAccessorTrait
     }
 
     /**
-     * \brief state() access through AsyncSteps interface / get value
+     * state() access through AsyncSteps interface / get value
      */
     public function &__get( $name )
     {
@@ -25,7 +30,7 @@ trait AsyncStepsStateAccessorTrait
     }
 
     /**
-     * \brief state() access through AsyncSteps interface / check value
+     * state() access through AsyncSteps interface / check value
      */
     public function __isset( $name )
     {
@@ -33,7 +38,7 @@ trait AsyncStepsStateAccessorTrait
     }
     
     /**
-     * \brief state() access through AsyncSteps interface / delete value
+     * state() access through AsyncSteps interface / delete value
      */
     public function __unset($name)
     {

@@ -1,14 +1,22 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
+
 
 namespace FutoIn\RI;
 
 /**
- * \brief Async Tool implementation for testing purposes
+ * Async Tool implementation for testing purposes
  *
  * Install like \FutoIn\RI\AsyncToolTest::init().
  *
  * The primary feature is predictive event firing for debugging
  * and Unit Testing through nextEvent()
+ *
+ * @api
  */
 class AsyncToolTest
     extends \FutoIn\RI\Details\AsyncToolImpl
@@ -24,7 +32,7 @@ class AsyncToolTest
     }
     
     /**
-     * \see \FutoIn\RI\Details\AsyncToolImpl::callLater
+     * @see \FutoIn\RI\Details\AsyncToolImpl::callLater
      */
     public function callLater( $cb, $delay_ms=0 )
     {
@@ -52,7 +60,7 @@ class AsyncToolTest
     }
     
     /**
-     * \see \FutoIn\RI\Details\AsyncToolImpl::cancelCall
+     * @see \FutoIn\RI\Details\AsyncToolImpl::cancelCall
      */
     public function cancelCall( $t )
     {
@@ -71,7 +79,7 @@ class AsyncToolTest
     }
     
     /**
-     * \brief Wait and execute the next item in queue, if any
+     * Wait and execute the next item in queue, if any
      */
     public static function nextEvent()
     {
@@ -91,7 +99,7 @@ class AsyncToolTest
     }
     
     /**
-     * \brief Check if any item is scheduled (for unit testing)
+     * Check if any item is scheduled (for unit testing)
      */
     public static function hasEvents()
     {
@@ -99,7 +107,7 @@ class AsyncToolTest
     }
 
     /**
-     * \brief Reset event queue (for unit testing)
+     * Reset event queue (for unit testing)
      */
     public static function resetEvents()
     {
@@ -107,7 +115,7 @@ class AsyncToolTest
     }
 
     /**
-     * \brief Get internal item queue (for unit testing)
+     * Get internal item queue (for unit testing)
      */
     public static function getEvents()
     {

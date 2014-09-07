@@ -1,10 +1,17 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
 
 namespace FutoIn\RI\Details;
 
 /**
- * \brief Internal class to organize AsyncSteps levels during execution
- * \warning: DO NOT use directly
+ * Internal class to organize AsyncSteps levels during execution
+ *
+ * @api
+ * @internal Do not use directly, not standard API
  */
 class AsyncStepsProtection
     implements \FutoIn\AsyncSteps

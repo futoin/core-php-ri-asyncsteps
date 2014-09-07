@@ -1,13 +1,19 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
 
 namespace FutoIn\RI;
 
 /**
- * \brief AsyncSteps reference implementation as per "FTN12: FutoIn Async API"
+ * AsyncSteps reference implementation as per "FTN12: FutoIn Async API"
  *
- * \sa http://specs.futoin.org/final/preview/ftn12_async_api.html
+ * @see http://specs.futoin.org/final/preview/ftn12_async_api.html
  *
  * \note AsyncTool must be initialized prior use
+ * @api
  */
 class AsyncSteps
     implements \FutoIn\AsyncSteps
@@ -15,7 +21,7 @@ class AsyncSteps
     use Details\AsyncStepsStateAccessorTrait;
     
     /**
-     * \brief Implementation-defined state variable name to setup AsyncStepsProtection implementation
+     * Implementation-defined state variable name to setup AsyncStepsProtection implementation
      */
     const STATE_ASP_CLASS = '_aspcls';
 
@@ -28,8 +34,8 @@ class AsyncSteps
     private $limit_event_ = null;
     
     /**
-     * \brief C-tor
-     * \param $state for INTERNAL use only
+     * C-tor
+     * @param $state for INTERNAL use only
      */
     public function __construct( $state=null )
     {
@@ -51,10 +57,10 @@ class AsyncSteps
     }
 
     /**
-     * \brief Add \$func step executor to end of current AsyncSteps level queue
-     * \param $func void execute_callback( AsyncSteps as[, previous_success_args] )
-     * \param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
-     * \return reference to $this
+     * Add \$func step executor to end of current AsyncSteps level queue
+     * @param $func void execute_callback( AsyncSteps as[, previous_success_args] )
+     * @param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
+     * @return reference to $this
      */
     public function add( callable $func, callable $onerror=null )
     {
@@ -68,9 +74,9 @@ class AsyncSteps
     }
     
     /**
-     * \brief Copy steps from other AsyncSteps, useful for sub-step cloning
+     * Copy steps from other AsyncSteps, useful for sub-step cloning
      * \note Please see the specification for more information
-     * \return reference to $this
+     * @return reference to $this
      */
     public function copyFrom( \FutoIn\AsyncSteps $other ){
         assert( $other instanceof AsyncSteps );
@@ -95,7 +101,7 @@ class AsyncSteps
     }
 
     /**
-     * \brief PHP-specific: properly copy internal structures after cloning of AsyncSteps
+     * PHP-specific: properly copy internal structures after cloning of AsyncSteps
      */
     public function __clone()
     {
@@ -105,9 +111,10 @@ class AsyncSteps
     }
 
     /**
-     * \brief Create special object to queue steps for execution in parallel
-     * \param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
-     * \return Special parallel interface, identical to AsyncSteps
+     * Create special object to queue steps for execution in parallel
+     *
+     * @param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
+     * @return Special parallel interface, identical to AsyncSteps
      * \note Please see the specification for more information
      *
      * All steps added through returned parallel object are seen as a single step
@@ -122,8 +129,9 @@ class AsyncSteps
     }
 
     /**
-     * \brief Access AsyncSteps state object
-     * \return State object
+     * Access AsyncSteps state object
+     *
+     * @return State object
      */
     public function state()
     {
@@ -131,9 +139,10 @@ class AsyncSteps
     }
 
     /**
-     * \brief Set "success" state of current step execution
+     * Set "success" state of current step execution
+     *
      * \note Please see the specification for constraints
-     * \param ... Any passed argument is used as input for the next step
+     * @param ... Any passed argument is used as input for the next step
      */
     public function success()
     {
@@ -167,10 +176,11 @@ class AsyncSteps
     }
     
     /**
-     * \brief Set "error" state of current step execution
-     * \param $name Type of error
+     * Set "error" state of current step execution
+     *
+     * @param $name Type of error
      * \note Please see the specification for constraints
-     * \see \FutoIn\Error
+     * @see \FutoIn\Error
      */
     public function error( $name )
     {
@@ -212,8 +222,9 @@ class AsyncSteps
     }
     
     /**
-     * \brief Delay further execution until success() or error() is called
-     * \param $timeout_ms Timeout in milliseconds
+     * Delay further execution until success() or error() is called
+     *
+     * @param $timeout_ms Timeout in milliseconds
      * \note Please see the specification
      */
     public function setTimeout( $timeout_ms )
@@ -235,7 +246,7 @@ class AsyncSteps
     }
     
     /**
-     * \brief PHP-specific alias for success()
+     * PHP-specific alias for success()
      */
     public function __invoke()
     {
@@ -243,8 +254,8 @@ class AsyncSteps
     }
     
     /**
-     * \brief Set cancellation callback
-     * \param $oncancel void cancel_callback( AsyncSteps as )
+     * Set cancellation callback
+     * @param $oncancel void cancel_callback( AsyncSteps as )
      * \note Please see the specification
      */
     public function setCancel( callable $oncancel )
@@ -253,7 +264,7 @@ class AsyncSteps
     }
     
     /**
-     * \brief Start execution of AsyncSteps
+     * Start execution of AsyncSteps
      */
     public function execute()
     {
@@ -323,8 +334,10 @@ class AsyncSteps
     }
     
     /**
-     * \brief Cancel execution
-     * \warning Do not use directly, not standard API
+     * Cancel execution
+     *
+     * @ignore Do not use directly, not standard API
+     * @internal
      */
     public function cancel()
     {
@@ -354,8 +367,10 @@ class AsyncSteps
     }
     
     /**
-     * \brief Cancel execution
-     * \warning Do not use directly, not standard API
+     * Cancel execution
+     *
+     * @ignore Do not use directly, not standard API
+     * @internal
      */
     public function getInnerQueue()
     {

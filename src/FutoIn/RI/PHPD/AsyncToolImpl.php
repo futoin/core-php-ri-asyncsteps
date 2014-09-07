@@ -3,16 +3,18 @@
 namespace FutoIn\RI\PHPD;
 
 /**
- * \brief Integration with PHP daemon (http://daemon.io/)
+ * Integration with PHP daemon (http://daemon.io/)
+ *
  * \warning NOT TESTED
  *
  * Install like \FutoIn\RI\PHPD\AsyncToolImpl::init()
+ * @ignore
  */
 class AsyncToolImpl
     extends \FutoIn\RI\Details\AsyncToolImpl
 {
     /**
-     * \see \FutoIn\RI\Details\AsyncToolImpl::callLater
+     * @see \FutoIn\RI\Details\AsyncToolImpl::callLater
      */
     public function callLater( $cb, $delay_ms=0 )
     {
@@ -25,7 +27,7 @@ class AsyncToolImpl
     }
     
     /**
-     * \see \FutoIn\RI\Details\AsyncToolImpl::cancelCall
+     * @see \FutoIn\RI\Details\AsyncToolImpl::cancelCall
      */
     public function cancelCall( $ref )
     {

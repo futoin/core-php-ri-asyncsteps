@@ -1,5 +1,13 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
 
+/**
+ * @ignore
+ */
 class BootstrapTest extends PHPUnit_Framework_TestCase
 {
     public function testAsyncSteps()

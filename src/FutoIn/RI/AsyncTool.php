@@ -1,9 +1,17 @@
 <?php
+/**
+ * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
+
 
 namespace FutoIn\RI;
 
 /**
- * \brief Wrapper interface for singleton AsyncTools implementation
+ * Wrapper interface for singleton AsyncTools implementation
+ *
+ * @api
  */
 class AsyncTool
 {
@@ -15,9 +23,10 @@ class AsyncTool
     private function __construct(){}
     
     /**
-     * \brief Install Async Tool implementation
-     * \param $impl AsyncTools implementation
-     * \see \FutoIn\RI\Details\AsyncToolImpl::init
+     * Install Async Tool implementation
+     *
+     * @param $impl AsyncTools implementation
+     * @see \FutoIn\RI\Details\AsyncToolImpl::init
      */
     public static function init( Details\AsyncToolImpl $impl )
     {
@@ -25,8 +34,9 @@ class AsyncTool
     }
     
     /**
-     * \brief Schedule \p $cb for later execution after \p $delays_ms milliseconds
-     * \return Any value, which serves as reference to the scheduled item
+     * Schedule $cb for later execution after $delays_ms milliseconds
+     *
+     * @return Any value, which serves as reference to the scheduled item
      */
     public static function callLater( $cb, $delay_ms=0 )
     {
@@ -34,7 +44,7 @@ class AsyncTool
     }
     
     /**
-     * \brief Cancel previously scheduled \p $ref item
+     * Cancel previously scheduled $ref item
      */
     public static function cancelCall( $ref )
     {
