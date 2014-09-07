@@ -74,6 +74,24 @@ class AsyncSteps
      */
     public function copyFrom( \FutoIn\AsyncSteps $other ){
         assert( $other instanceof AsyncSteps );
+        
+        // Copy steps
+        $oq = $other->getInnerQueue();
+        $oq->rewind();
+        
+        $q = $this->queue_;
+        
+        for ( ; $oq->valid(); $oq->next() )
+        {
+            $q->enqueue( $oq->current() );
+        }
+        
+        // Copy state
+        $s = $this->state_;
+        foreach ( $other->state_ as $k => $v )
+        {
+            $s->{$k} = $v;
+        }
     }
 
     /**
@@ -333,5 +351,14 @@ class AsyncSteps
             
             array_pop( $this->adapter_stack_ );
         }
+    }
+    
+    /**
+     * \brief Cancel execution
+     * \warning Do not use directly, not standard API
+     */
+    public function getInnerQueue()
+    {
+        return $this->queue_;
     }
 }

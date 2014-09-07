@@ -153,9 +153,7 @@ class ParallelStep
     }
     
     public function __clone()
-    {
-        // TODO:
-    }
+    {}
 
 }
 

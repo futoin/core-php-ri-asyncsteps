@@ -138,7 +138,34 @@ class AsyncStepsProtection
     
     public function copyFrom( \FutoIn\AsyncSteps $other )
     {
-        // TODO:
+        assert( $other instanceof \FutoIn\RI\AsyncSteps );
+        
+        // Copy steps
+        $oq = $other->getInnerQueue();
+        $oq->rewind();
+        
+        if ( !$this->queue_ )
+        {
+            $q = new \SplQueue();
+            $this->queue_ = $q;
+        }
+        else
+        {
+            $q = $this->queue_;
+        }
+
+        
+        for ( ; $oq->valid(); $oq->next() )
+        {
+            $q->enqueue( $oq->current() );
+        }
+        
+        // Copy state
+        $s = $this->state_;
+        foreach ( $other->state_ as $k => $v )
+        {
+            $s->{$k} = $v;
+        }
     }
     
     public function __clone()
