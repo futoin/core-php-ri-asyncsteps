@@ -12,7 +12,7 @@
     "homepage" : "http://futoin.org",
     "require" : {
         "php" : ">=5.5",
-        "futoin/core-php-api" : "@dev",
+        "futoin/core-php-api" : ">=0.1",
         "psr/log": ">=1.0.0"
     },
     "require-dev" : {
@@ -23,12 +23,6 @@
     "provide" : {
         "futoin/core-php" : "1.*"
     },
-    "repositories" : [
-        {
-            "type": "vcs",
-            "url": "ssh://git@cfvcs/futoin/core-php-api"
-        }
-    ],
     "autoload": {
         "psr-0": {
             "FutoIn\\RI\\": "src/"
