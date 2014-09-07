@@ -452,6 +452,88 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
 
         $this->assertNoEvents();
     }
+    
+    public function testParallelInnerSuccess()
+    {
+        $as = $this->as;
+        
+        $as->state()->first_called = false;
+        $as->state()->second_called = false;
+        $as->state()->final_called = false;
+
+        $as->add(function($as){
+            $parallel = $as->parallel();
+            
+            $parallel->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->first_called = true;
+                    $as->success();
+                }
+            )->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->second_called = true;
+                    $as->success();
+                }
+            );
+            
+            $as->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->final_called = true;
+                }
+            );
+        });
+        
+        // Initialize parallel
+        $as->execute();
+        AsyncToolTest::nextEvent();
+
+        $this->assertFalse(
+            $as->state()->first_called,
+            "First step was called"
+        );
+        $this->assertFalse(
+            $as->state()->second_called,
+            "Second step was called"
+        );
+
+        // Auto-added final success
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+
+        $this->assertTrue(
+            $as->state()->first_called,
+            "First step was not called"
+        );
+        $this->assertTrue(
+            $as->state()->second_called,
+            "Second step was not called"
+        );
+        
+        $this->assertFalse(
+            $as->state()->final_called,
+            "Final step was called"
+        );
+        
+        $this->assertHasEvents();
+        
+        // Auto-added final success
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        
+        $this->assertFalse(
+            $as->state()->final_called,
+            "Final step was called"
+        );
+        
+        AsyncToolTest::nextEvent();
+        
+        $this->assertTrue(
+            $as->state()->final_called,
+            "Final step was not called"
+        );
+
+        $this->assertNoEvents();
+    }
 
     public function testParallelError()
     {
@@ -486,6 +568,93 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         
         // Initialize parallel
         $as->execute();
+
+        $this->assertFalse(
+            $as->state()->first_called,
+            "First step was called"
+        );
+        $this->assertFalse(
+            $as->state()->second_called,
+            "Second step was called"
+        );
+        $this->assertFalse(
+            $as->state()->error_called,
+            "Error step was called"
+        );
+
+
+        // Auto-added final success
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+
+        $this->assertTrue(
+            $as->state()->first_called,
+            "First step was not called"
+        );
+        $this->assertTrue(
+            $as->state()->second_called,
+            "Second step was not called"
+        );
+        $this->assertFalse(
+            $as->state()->error_called,
+            "Error step was called"
+        );
+        
+        $this->assertHasEvents();
+        
+        // Auto-added final success
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        
+        $this->assertTrue(
+            $as->state()->error_called,
+            "Error step was not called"
+        );
+        
+        $this->assertFalse(
+            $as->state()->final_called,
+            "Final step was called"
+        );
+
+        $this->assertNoEvents();
+    }
+    
+    public function testParallelInnerError()
+    {
+        $as = $this->as;
+        
+        $as->state()->first_called = false;
+        $as->state()->second_called = false;
+        $as->state()->final_called = false;
+        $as->state()->error_called = false;
+
+        $as->add(function($as){
+            $parallel = $as->parallel(function( \FutoIn\AsyncSteps $as, $name ){
+                $as->state()->error_called = true;
+            });
+            
+            $parallel->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->first_called = true;
+                    $as->error("MyError");
+                }
+            )->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->second_called = true;
+                    $as->success();
+                }
+            );
+            
+            $as->add(
+                function( \FutoIn\AsyncSteps $as ){
+                    $as->state()->final_called = true;
+                }
+            );
+        });
+        
+        // Initialize parallel
+        $as->execute();
+        AsyncToolTest::nextEvent();
 
         $this->assertFalse(
             $as->state()->first_called,
@@ -922,6 +1091,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         );
         
         $as->execute();
+        AsyncToolTest::nextEvent();
         AsyncToolTest::nextEvent();
         $this->assertNoEvents();
     }

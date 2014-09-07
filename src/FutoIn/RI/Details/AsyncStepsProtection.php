@@ -11,7 +11,7 @@ class AsyncStepsProtection
 {
     use AsyncStepsStateAccessorTrait;
     
-    private $parent_;
+    private $root_;
     private $adapter_stack_;
     public $onerror_;
     public $oncancel_;
@@ -19,9 +19,9 @@ class AsyncStepsProtection
     public $limit_event_ = null;
     
     
-    public function __construct( $parent, &$adapter_stack )
+    public function __construct( $root, &$adapter_stack )
     {
-        $this->parent_ = $parent;
+        $this->root_ = $root;
         $this->adapter_stack_ = &$adapter_stack;
     }
     
@@ -53,12 +53,16 @@ class AsyncStepsProtection
     
     public function parallel( callable $onerror=null )
     {
-        return $this->parent_->parallel( $onerror );
+        $p = new ParallelStep( $this->root_, $this );
+        $this->add( function($as) use ( $p ){
+            $p->executeParallel($as);
+        }, $onerror );
+        return $p;
     }
     
     public function state()
     {
-        return $this->parent_->state();
+        return $this->root_->state();
     }    
 
     public function success()
@@ -66,7 +70,7 @@ class AsyncStepsProtection
         if ( ( end($this->adapter_stack_) === $this ) &&
              !$this->queue_ )
         {
-            call_user_func_array( [ $this->parent_, 'success' ], func_get_args() );
+            call_user_func_array( [ $this->root_, 'success' ], func_get_args() );
         }
         else
         {
@@ -80,7 +84,7 @@ class AsyncStepsProtection
         if ( ( end($this->adapter_stack_) === $this ) &&
              !$this->queue_ )
         {
-            $this->parent_->error( $name );
+            $this->root_->error( $name );
         }
         else
         {
@@ -102,7 +106,7 @@ class AsyncStepsProtection
                 $this->limit_event_ = null;
 
                 // Skip own sanity checks for top-of-stack
-                $this->parent_->error( \FutoIn\Error::Timeout );
+                $this->root_->error( \FutoIn\Error::Timeout );
             },
             $timeout_ms
         );
@@ -112,7 +116,7 @@ class AsyncStepsProtection
     {
         if ( end($this->adapter_stack_) === $this )
         {
-            call_user_func_array( [ $this->parent_, 'success' ], func_get_args() );
+            call_user_func_array( [ $this->root_, 'success' ], func_get_args() );
         }
         else
         {
@@ -124,5 +128,31 @@ class AsyncStepsProtection
     public function setCancel( callable $oncancel )
     {
         $this->oncancel_ = $oncancel;
+    }
+    
+    public function execute()
+    {
+        // not allowed
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    public function copyFrom( \FutoIn\AsyncSteps $other )
+    {
+        // TODO:
+    }
+    
+    public function __clone()
+    {
+        // not allowed
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    
+    /**
+     * \warning Do not use directly, not standard API for INTERNAL USE
+     */
+    public function getRoot()
+    {
+        return $this->root_;
     }
 }

@@ -66,6 +66,25 @@ class AsyncSteps
         
         return $this;
     }
+    
+    /**
+     * \brief Copy steps from other AsyncSteps, useful for sub-step cloning
+     * \note Please see the specification for more information
+     * \return reference to $this
+     */
+    public function copyFrom( \FutoIn\AsyncSteps $other ){
+        assert( $other instanceof AsyncSteps );
+    }
+
+    /**
+     * \brief PHP-specific: properly copy internal structures after cloning of AsyncSteps
+     */
+    public function __clone()
+    {
+        assert( empty( $this->adapter_stack_ ) );
+        $this->queue_ = clone $this->queue_;
+        $this->state_ = clone $this->state_;
+    }
 
     /**
      * \brief Create special object to queue steps for execution in parallel
@@ -77,9 +96,9 @@ class AsyncSteps
      */
     public function parallel( callable $onerror=null )
     {
-        $p = new Details\ParallelStep( $this );
+        $p = new Details\ParallelStep( $this, $this );
         $this->add( function($as) use ( $p ){
-            $p->execute($as);
+            $p->executeParallel($as);
         }, $onerror );
         return $p;
     }
