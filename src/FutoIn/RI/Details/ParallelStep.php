@@ -3,7 +3,10 @@
 namespace FutoIn\RI\Details;
 
 
-/// \NOTE: DO NOT use directly
+/**
+ * \brief Internal class to organize Parallel step execution
+ * \warning: DO NOT use directly
+ */
 class ParallelStep
     implements \FutoIn\AsyncSteps
 {

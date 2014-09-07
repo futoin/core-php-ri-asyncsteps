@@ -2,13 +2,21 @@
 
 namespace FutoIn\RI;
 
-/// TODO: Too dirty... To be redesigned.
-
+/**
+ * \brief AsyncSteps reference implementation as per "FTN12: FutoIn Async API"
+ *
+ * \sa http://specs.futoin.org/final/preview/ftn12_async_api.html
+ *
+ * \note AsyncTool must be initialized prior use
+ */
 class AsyncSteps
     implements \FutoIn\AsyncSteps
 {
     use Details\AsyncStepsStateAccessorTrait;
     
+    /**
+     * \brief Implementation-defined state variable name to setup AsyncStepsProtection implementation
+     */
     const STATE_ASP_CLASS = '_aspcls';
 
     private $queue_;
@@ -19,6 +27,10 @@ class AsyncSteps
     private $succeeded_;
     private $limit_event_ = null;
     
+    /**
+     * \brief C-tor
+     * \param $state for INTERNAL use only
+     */
     public function __construct( $state=null )
     {
         $this->queue_ = new \SplQueue();
@@ -38,6 +50,12 @@ class AsyncSteps
         $this->next_args_ = array();
     }
 
+    /**
+     * \brief Add \$func step executor to end of current AsyncSteps level queue
+     * \param $func void execute_callback( AsyncSteps as[, previous_success_args] )
+     * \param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
+     * \return reference to $this
+     */
     public function add( callable $func, callable $onerror=null )
     {
         $o = new \StdClass();
@@ -48,7 +66,15 @@ class AsyncSteps
         
         return $this;
     }
-    
+
+    /**
+     * \brief Create special object to queue steps for execution in parallel
+     * \param $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
+     * \return Special parallel interface, identical to AsyncSteps
+     * \note Please see the specification for more information
+     *
+     * All steps added through returned parallel object are seen as a single step
+     */
     public function parallel( callable $onerror=null )
     {
         $p = new Details\ParallelStep( $this );
@@ -57,12 +83,21 @@ class AsyncSteps
         }, $onerror );
         return $p;
     }
-    
+
+    /**
+     * \brief Access AsyncSteps state object
+     * \return State object
+     */
     public function state()
     {
         return $this->state_;
     }
-    
+
+    /**
+     * \brief Set "success" state of current step execution
+     * \note Please see the specification for constraints
+     * \param ... Any passed argument is used as input for the next step
+     */
     public function success()
     {
         $this->next_args_ = func_get_args();
@@ -94,6 +129,12 @@ class AsyncSteps
         }
     }
     
+    /**
+     * \brief Set "error" state of current step execution
+     * \param $name Type of error
+     * \note Please see the specification for constraints
+     * \see \FutoIn\Error
+     */
     public function error( $name )
     {
         $this->next_args_ = array();
@@ -133,7 +174,11 @@ class AsyncSteps
         }
     }
     
-    /// \brief Delay further execution until success() or error() is called
+    /**
+     * \brief Delay further execution until success() or error() is called
+     * \param $timeout_ms Timeout in milliseconds
+     * \note Please see the specification
+     */
     public function setTimeout( $timeout_ms )
     {
         if ( $this->limit_event_ )
@@ -152,17 +197,27 @@ class AsyncSteps
         );
     }
     
+    /**
+     * \brief PHP-specific alias for success()
+     */
     public function __invoke()
     {
         call_user_func_array( $this->success, func_get_args() );
     }
     
+    /**
+     * \brief Set cancellation callback
+     * \param $oncancel void cancel_callback( AsyncSteps as )
+     * \note Please see the specification
+     */
     public function setCancel( callable $oncancel )
     {
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
     
-    //! \note Do not use directly!
+    /**
+     * \brief Start execution of AsyncSteps
+     */
     public function execute()
     {
         if ( $this->adapter_stack_ )
@@ -230,7 +285,10 @@ class AsyncSteps
         }
     }
     
-    //! \note Do not use directly!
+    /**
+     * \brief Cancel execution
+     * \warning Do not use directly, not standard API
+     */
     public function cancel()
     {
         if ( $this->limit_event_ )

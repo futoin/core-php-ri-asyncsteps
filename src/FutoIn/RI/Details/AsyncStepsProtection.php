@@ -2,8 +2,10 @@
 
 namespace FutoIn\RI\Details;
 
-
-/// \NOTE: DO NOT use directly
+/**
+ * \brief Internal class to organize AsyncSteps levels during execution
+ * \warning: DO NOT use directly
+ */
 class AsyncStepsProtection
     implements \FutoIn\AsyncSteps
 {
