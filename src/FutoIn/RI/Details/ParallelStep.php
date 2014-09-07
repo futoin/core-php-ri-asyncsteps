@@ -101,6 +101,7 @@ class ParallelStep
             $p->root_ = $root;
             $p->executeParallel( $as );
             unset( $p );
+            return;
         }
         
         $this->as_ = $as;

@@ -147,31 +147,43 @@ class AsyncStepsProtection
     {
         assert( $other instanceof \FutoIn\RI\AsyncSteps );
         
+        if ( end($this->adapter_stack_) !== $this )
+        {
+            throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+        }
+        
         // Copy steps
         $oq = $other->getInnerQueue();
         $oq->rewind();
         
-        if ( !$this->queue_ )
+        if ( $oq->valid() )
         {
-            $q = new \SplQueue();
-            $this->queue_ = $q;
-        }
-        else
-        {
-            $q = $this->queue_;
-        }
+            if ( !$this->queue_ )
+            {
+                $q = new \SplQueue();
+                $this->queue_ = $q;
+            }
+            else
+            {
+                $q = $this->queue_;
+            }
 
-        
-        for ( ; $oq->valid(); $oq->next() )
-        {
-            $q->enqueue( $oq->current() );
+            
+            for ( ; $oq->valid(); $oq->next() )
+            {
+                $q->enqueue( $oq->current() );
+            }
         }
         
         // Copy state
-        $s = $this->state_;
-        foreach ( $other->state_ as $k => $v )
+        $s = $this->state();
+        
+        foreach ( $other->state() as $k => $v )
         {
-            $s->{$k} = $v;
+            if ( !isset( $s->{$k} ) )
+            {
+                $s->{$k} = $v;
+            }
         }
     }
     
@@ -183,7 +195,8 @@ class AsyncStepsProtection
     
     
     /**
-     * \warning Do not use directly, not standard API for INTERNAL USE
+     * @ignore
+     * @internal Do not use directly, not standard API for INTERNAL USE
      */
     public function getRoot()
     {

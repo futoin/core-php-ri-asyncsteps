@@ -106,6 +106,7 @@ class AsyncSteps
     public function __clone()
     {
         assert( empty( $this->adapter_stack_ ) );
+        
         $this->queue_ = clone $this->queue_;
         $this->state_ = clone $this->state_;
     }
@@ -303,7 +304,7 @@ class AsyncSteps
         {
             $asp->onerror_ = $current->onerror ;
             $asp->oncancel_ = null;
-            array_push( $this->adapter_stack_, $asp );
+            $this->adapter_stack_[] = $asp;
             
             $oc = count( $this->adapter_stack_ );
             call_user_func_array( $current->func, $next_args );

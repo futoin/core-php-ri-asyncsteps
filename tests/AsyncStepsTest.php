@@ -1102,9 +1102,60 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         AsyncToolTest::nextEvent();
         AsyncToolTest::nextEvent();
         $this->assertNoEvents();
+        $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
+        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
     }
-}
+    
+    public function testClone()
+    {
+        $ras = new ASTestImpl();
+        
+        $ras->as_test_used = false;
+        $ras->asp_test_used = false;
+        
+        $pas = $this->as;
+        $pas->inner_copied = true;
+        $p = $pas->parallel();
+        $p->add(
+            function( $as )
+            {
+                $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
+                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
+            }
+        );
 
+        
+        $ras->add(
+            function($as) use ($pas){
+                $this->assertFalse( $as->as_test_used, "ASTestImpl is called" );
+                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
+                $as->asp_test_used = false;
+                
+                $this->assertFalse( isset( $as->inner_copied ), "inner_copied is set" );
+                
+                $as->copyFrom( $pas );
+                
+                $this->assertTrue( isset( $as->inner_copied ), "inner_copied is not set" );
+            }
+        );
+        
+        $as = $this->as = clone $ras;
+        
+        $as->execute();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        $this->assertNoEvents();
+        
+        $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
+        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
+        $this->assertFalse( $ras->as_test_used, "reference model state is affected as_test_used" );
+        $this->assertFalse( $ras->asp_test_used, "reference model state is affected asp_test_used" );
+    }}
+
+/**
+ * Internal class for testing
+ * @ignore
+ */
 class ASTestImpl extends \FutoIn\RI\AsyncSteps
 {
     public function __construct( $state=null )
@@ -1115,6 +1166,10 @@ class ASTestImpl extends \FutoIn\RI\AsyncSteps
     }
 }
 
+/**
+ * Internal class for testing
+ * @ignore
+ */
 class ASPTestImpl extends \FutoIn\RI\Details\AsyncStepsProtection
 {
     public function __construct( $parent, &$adapter_stack )
