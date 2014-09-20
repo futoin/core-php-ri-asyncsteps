@@ -20,9 +20,6 @@
         "phpunit/php-invoker": "*",
         "monolog/monolog": "1.*"
     },
-    "provide" : {
-        "futoin/core-php" : "1.*"
-    },
     "autoload": {
         "psr-0": {
             "FutoIn\\RI\\": "src/"
