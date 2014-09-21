@@ -30,6 +30,10 @@ class ScopedSteps
         {
             AsyncToolTest::init();
         }
+        else
+        {
+            AsyncToolTest::resetEvents();
+        }
         
         parent::__construct( $state );
     }
