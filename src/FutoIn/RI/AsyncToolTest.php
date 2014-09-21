@@ -121,4 +121,15 @@ class AsyncToolTest
     {
         return self::$queue;
     }
+    
+    /**
+     * Run event loop until last event pending
+     */
+    public static function run()
+    {
+        while ( self::hasEvents() )
+        {
+            self::nextEvent();
+        }
+    }
 };

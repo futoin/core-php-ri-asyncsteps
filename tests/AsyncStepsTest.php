@@ -1150,7 +1150,24 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
         $this->assertFalse( $ras->as_test_used, "reference model state is affected as_test_used" );
         $this->assertFalse( $ras->asp_test_used, "reference model state is affected asp_test_used" );
-    }}
+    }
+    
+    public function testScopedSteps()
+    {
+        $s = new \FutoIn\RI\ScopedSteps;
+        
+        $s->add(function( $as ){
+            $as->success( "123" );
+        })->add(function( $as, $val ){
+            $as->my_val = $val;
+        });
+
+        $s->run();
+        
+        $this->assertEquals( "123", $s->my_val );
+        $this->assertNoEvents();
+    }
+}
 
 /**
  * Internal class for testing

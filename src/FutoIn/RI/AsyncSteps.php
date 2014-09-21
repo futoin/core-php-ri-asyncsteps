@@ -368,8 +368,6 @@ class AsyncSteps
     }
     
     /**
-     * Cancel execution
-     *
      * @ignore Do not use directly, not standard API
      * @internal
      */
