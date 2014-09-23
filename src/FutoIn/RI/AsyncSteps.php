@@ -64,6 +64,11 @@ class AsyncSteps
      */
     public function add( callable $func, callable $onerror=null )
     {
+        if ( !empty( $this->adapter_stack_ ) )
+        {
+            throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+        }
+    
         $o = new \StdClass();
         $o->func = $func;
         $o->onerror = $onerror;
