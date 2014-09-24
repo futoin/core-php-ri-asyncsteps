@@ -219,12 +219,15 @@ class AsyncSteps
                 // onError stack may decreases on sucess/error()
                 if ( $oc !== count( $this->adapter_stack_ ) )
                 {
-                    break;
+                    return;
                 }
             }
 
             array_pop( $this->adapter_stack_ );
         }
+        
+        // Reach the bottom of error handler stack. End execution. Cleanup.
+        $this->queue_ = new \SplQueue(); // No clear() method so far PHP #60759
     }
     
     /**
