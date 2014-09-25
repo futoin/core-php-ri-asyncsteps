@@ -373,6 +373,9 @@ class AsyncSteps
             
             array_pop( $this->adapter_stack_ );
         }
+        
+        // End execution. Cleanup.
+        $this->queue_ = new \SplQueue(); // No clear() method so far PHP #60759
     }
     
     /**
