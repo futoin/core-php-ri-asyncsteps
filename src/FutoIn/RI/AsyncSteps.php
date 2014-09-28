@@ -154,6 +154,12 @@ class AsyncSteps
     {
         $this->next_args_ = func_get_args();
         
+        if ( !count( $this->adapter_stack_ ) )
+        {
+            // Not inside AsyncSteps execution
+            throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+        }
+        
         for(;;)
         {
             $asp = end( $this->adapter_stack_ );
