@@ -188,13 +188,39 @@ class AsyncSteps
     }
     
     /**
+     * Call success() or add sub-step with success() depending on presence of other sub-steps
+     */
+    public function successStep()
+    {
+        // Not inside AsyncSteps execution
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+
+    
+    /**
      * Set "error" state of current step execution
      *
      * @param $name Type of error
+     * @param $error_info Error description to be put into "error_info" state field
      * \note Please see the specification for constraints
      * @see \FutoIn\Error
      */
-    public function error( $name )
+    public function error( $name, $error_info=null )
+    {
+        if ( $error_info !== null )
+        {
+            $this->state()->error_info = $error_info;
+        }
+        
+        throw new \FutoIn\Error( $name );
+    }
+    
+    /**
+     * Set "error" state of current step execution
+     * @ignore Do not use directly, not standard API
+     * @internal
+     */
+    public function handle_error( $name )
     {
         $this->next_args_ = array();
 
@@ -220,9 +246,16 @@ class AsyncSteps
                 // Supress non-empty sub-steps error
                 $asp->queue_ = null;
 
-                call_user_func( $asp->onerror_, $asp, $name );
+                try
+                {
+                    call_user_func( $asp->onerror_, $asp, $name );
+                }
+                catch ( \FutoIn\Error $e )
+                {
+                    $name = $e->getMessage();
+                }
                 
-                // onError stack may decreases on sucess/error()
+                // onError stack may decreases on success()
                 if ( $oc !== count( $this->adapter_stack_ ) )
                 {
                     return;
@@ -254,7 +287,7 @@ class AsyncSteps
                 AsyncTool::cancelCall( $this->limit_event_ );
                 $this->limit_event_ = null;
 
-                $this->error( \FutoIn\Error::Timeout );
+                $this->handle_error( \FutoIn\Error::Timeout );
             },
             $timeout_ms
         );
@@ -338,13 +371,13 @@ class AsyncSteps
                     // a) call inner add() to continue execution of sub-steps
                     // b) call success() or error() to complete execution of current steps
                     // c) call setTimeout() to delay further execution until result is received
-                    $this->error( \FutoIn\Error::InternalError );
+                    $this->handle_error( \FutoIn\Error::InternalError );
                 }
             }
         }
         catch ( \FutoIn\Error $e )
         {
-            $this->error( $e->getMessage() );
+            $this->handle_error( $e->getMessage() );
         }
     }
     

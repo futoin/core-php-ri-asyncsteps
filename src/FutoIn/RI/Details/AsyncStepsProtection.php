@@ -86,12 +86,25 @@ class AsyncStepsProtection
         }
     }
     
-    public function error( $name )
+    public function successStep()
+    {
+        if ( $this->queue_ )
+        {
+            $this->add( 'successStep' );
+        }
+        else
+        {
+            $this->success();
+        }
+    }
+
+    
+    public function error( $name, $error_info=null )
     {
         if ( ( end($this->adapter_stack_) === $this ) &&
              !$this->queue_ )
         {
-            $this->root_->error( $name );
+            $this->root_->error( $name, $error_info );
         }
         else
         {
@@ -113,7 +126,7 @@ class AsyncStepsProtection
                 $this->limit_event_ = null;
 
                 // Skip own sanity checks for top-of-stack
-                $this->root_->error( \FutoIn\Error::Timeout );
+                $this->root_->handle_error( \FutoIn\Error::Timeout );
             },
             $timeout_ms
         );

@@ -55,7 +55,7 @@ class ParallelStep
         {
             if ( $this->error_ )
             {
-                $this->as_->error( $this->error_ );
+                $this->root_->handle_error( $this->error_ );
             }
             else
             {
@@ -64,7 +64,12 @@ class ParallelStep
         }
     }
     
-    public function error( $name )
+    public function successStep()
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    public function error( $name, $error_info=null )
     {
         $this->error_ = $name;
         $this->success();
