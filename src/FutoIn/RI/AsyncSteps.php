@@ -337,6 +337,15 @@ class AsyncSteps
         }
         
         $current = $q->dequeue();
+        
+        // Runtime optimization
+        if ( $current->func === null )
+        {
+            $this->success();
+            $this->next_args_ = array();
+            return;
+        }
+        
         $q->rewind(); // Make sure inner add() are insert in front
         
         $asp_cls = $this->state()->{self::STATE_ASP_CLASS};

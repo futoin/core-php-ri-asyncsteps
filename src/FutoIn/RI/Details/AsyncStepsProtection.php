@@ -90,7 +90,8 @@ class AsyncStepsProtection
     {
         if ( $this->queue_ )
         {
-            $this->add( 'successStep' );
+            $this->add( [$this, 'success'] );
+            $this->queue_->top()->func = null;
         }
         else
         {

@@ -1167,6 +1167,47 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $this->assertEquals( "123", $s->my_val );
         $this->assertNoEvents();
     }
+    
+    public function testSuccessStep()
+    {
+        $as = $this->as;
+        $as->final_called = false;
+        
+        $as->add(function($as){
+            $as->successStep();
+        })->add(function($as){
+            $as->add(function($as){
+                $as->success();
+            });
+            $as->successStep();
+        })->add(function($as){
+            $p = $as->parallel();
+            $p->add(function($as){
+                $as->add(function($as){
+                    $as->success();
+                });
+                $as->successStep();
+            });
+            $as->successStep();
+        })->add(function($as){
+            $as->final_called = true;
+        });
+        
+        $as->execute();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
+        $this->assertNoEvents();
+        $this->assertTrue( $as->final_called, "Final step was not called" );
+    }
 }
 
 /**
