@@ -1,4 +1,6 @@
 
+[![Build Status](https://travis-ci.org/futoin/core-php-ri-asyncsteps.svg)](https://travis-ci.org/futoin/core-php-ri-asyncsteps)
+
 Reference implementation of:
  
     FTN12: FutoIn Async API
