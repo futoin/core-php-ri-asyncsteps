@@ -28,6 +28,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
     public function tearDown()
     {
         $this->as = null;
+        gc_collect_cycles();
     }
     
     public function assertHasEvents()
