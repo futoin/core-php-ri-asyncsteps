@@ -27,7 +27,7 @@ class AsyncToolTest
     {
         if ( !self::$queue )
         {
-            self::$queue = new \SplQueue();
+            self::$queue = [];
         }
     }
     
@@ -39,23 +39,22 @@ class AsyncToolTest
         $t = new \StdClass();
         $t->cb = $cb;
         
-        $q = self::$queue;
+        $q = &self::$queue;
         
-        $q->rewind();
         $t->firetime = ( microtime( true ) * 1e6 ) + $delay_ms;
-        
-        for ( ; $q->valid(); $q->next() )
+      
+        for ( $i = 0; $i < count( $q ); ++$i )
         {
-            $c = $q->current();
+            $c = &$q[$i];
             
             if ( $c->firetime > $t->firetime )
             {
-                $q->add( $q->key(), $t );
+                array_splice( $q, $i, 0, [$t] );
                 return $t;
             }
         }
         
-        $q->enqueue( $t );
+        $q[] = $t;
         return $t;
     }
     
@@ -64,15 +63,13 @@ class AsyncToolTest
      */
     public function cancelCall( $t )
     {
-        $q = self::$queue;
+        $q = &self::$queue;
         
-        $q->rewind();
-        
-        for ( ; $q->valid(); $q->next() )
+        for ( $i = 0; $i < count( $q ); ++$i )
         {
-            if ( $q->current() === $t )
+            if ( $q[$i] === $t )
             {
-                $q->offsetUnset( $q->key() );
+                array_splice( $q, $i, 1 );
                 break;
             }
         }
@@ -85,7 +82,7 @@ class AsyncToolTest
     {
         if ( self::hasEvents() )
         {
-            $t = self::$queue->dequeue();
+            $t = array_shift( self::$queue );
             
             $sleep = $t->firetime - ( microtime( true ) * 1e6 );
             
@@ -103,7 +100,7 @@ class AsyncToolTest
      */
     public static function hasEvents()
     {
-        return self::$queue->count() > 0;
+        return count( self::$queue ) > 0;
     }
 
     /**
@@ -111,13 +108,13 @@ class AsyncToolTest
      */
     public static function resetEvents()
     {
-        self::$queue = new \SplQueue();
+        self::$queue = [];
     }
 
     /**
      * Get internal item queue (for unit testing)
      */
-    public static function getEvents()
+    public static function &getEvents()
     {
         return self::$queue;
     }

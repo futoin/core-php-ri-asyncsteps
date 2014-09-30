@@ -1017,7 +1017,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         AsyncToolTest::nextEvent();
         AsyncToolTest::nextEvent();
         
-        $this->assertEquals( 2, AsyncToolTest::getEvents()->count(), "There must be two timeout events pending" );
+        $this->assertEquals( 2, count(AsyncToolTest::getEvents()), "There must be two timeout events pending" );
         
         AsyncToolTest::nextEvent();
         
@@ -1027,7 +1027,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         AsyncToolTest::nextEvent();
         
         $this->assertTrue( $as->state()->second_called, "Second was not called" );
-        $this->assertEquals( 1, AsyncToolTest::getEvents()->count(), "There must be one timeout events pending" );
+        $this->assertEquals( 1, count(AsyncToolTest::getEvents()), "There must be one timeout events pending" );
         
         // During inner second step timeout
         $as->cancel();
