@@ -45,6 +45,7 @@ class AsyncSteps
         if ( $state === null )
         {
             $state = new \StdClass();
+            $state->error_info = '';
         }
         
         if ( !isset( $state->{self::STATE_ASP_CLASS} ) )
