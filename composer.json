@@ -1,6 +1,6 @@
 {
     "name" : "futoin/core-php-ri-asyncsteps",
-    "version" : "0.99.7",
+    "version" : "0.99.8",
     "description" : "FutoIn Core Reference Implementation for PHP - AsyncSteps",
     "authors" : [
         {
@@ -11,12 +11,12 @@
     "license" : "Apache-2.0",
     "homepage" : "http://futoin.org",
     "require" : {
-        "php" : ">=5.5",
-        "futoin/core-php-api" : ">=0.3",
+        "php" : "~5.5",
+        "futoin/core-php-api" : "~0.3",
         "ext-spl": "*"
     },
     "require-dev" : {
-        "phpunit/phpunit": ">=4.1",
+        "phpunit/phpunit": "~4.1",
         "phpunit/php-invoker": "*"
     },
     "autoload": {
