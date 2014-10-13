@@ -110,7 +110,6 @@ class ParallelStep
         }
         
         $this->as_ = $as;
-        $as->setCancel([ $this, 'cancel']);
         
         if ( empty( $this->parallel_steps_ ) )
         {
@@ -118,26 +117,32 @@ class ParallelStep
             return;
         }
         
+        $as->setCancel([ $this, 'cancel']);
+        
         $as_cls = get_class( $this->root_ );
         
         $plist =  $this->parallel_steps_;
         $this->parallel_steps_ = array();
+        
+        $success_func = function($as){
+            $as->success();
+            $this->success();
+        };
+        
+        $error_func = function( $as, $name ){
+            $this->error( $name );
+        };
         
         foreach ( $plist as $ps )
         {
             $s = new $as_cls( $this->as_->state() );
             
             $s->add(
-                function( $as ) use ( $ps ) {
+                function( $as ) use ( $ps, $success_func ) {
                     $as->add(  $ps[0], $ps[1] );
-                    $as->add(function($as){
-                        $as->success();
-                        $this->success();
-                    });
+                    $as->add( $success_func );
                 },
-                function( $as, $name ){
-                    $this->error( $name );
-                }
+                $error_func
             );
             
             $this->parallel_steps_[] = $s;

@@ -30,7 +30,6 @@ class AsyncSteps
     private $state_;
     private $next_args_;
     private $execute_event_ = null;
-    private $succeeded_;
     private $limit_event_ = null;
     
     /**
