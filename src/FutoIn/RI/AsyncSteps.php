@@ -152,6 +152,16 @@ class AsyncSteps
      */
     public function success()
     {
+        // Not inside AsyncSteps execution
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    /**
+     * @ignore Do not use directly, not standard API
+     * @internal
+     */
+    public function handle_success()
+    {
         $this->next_args_ = func_get_args();
         
         if ( !count( $this->adapter_stack_ ) )
@@ -298,7 +308,7 @@ class AsyncSteps
      */
     public function __invoke()
     {
-        call_user_func_array( $this->success, func_get_args() );
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
     
     /**
@@ -341,7 +351,7 @@ class AsyncSteps
         // Runtime optimization
         if ( $current->func === null )
         {
-            $this->success();
+            $this->handle_success();
             $this->next_args_ = array();
             return;
         }

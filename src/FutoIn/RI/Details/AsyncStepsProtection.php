@@ -40,14 +40,12 @@ class AsyncStepsProtection
             $o->func = $func;
             $o->onerror = $onerror;
             
-            if ( !$this->queue_ )
+            $q = $this->queue_;
+            
+            if ( !$q )
             {
                 $q = new \SplQueue();
                 $this->queue_ = $q;
-            }
-            else
-            {
-                $q = $this->queue_;
             }
 
             $q->enqueue( $o );
@@ -77,7 +75,7 @@ class AsyncStepsProtection
         if ( ( end($this->adapter_stack_) === $this ) &&
              !$this->queue_ )
         {
-            call_user_func_array( [ $this->root_, 'success' ], func_get_args() );
+            call_user_func_array( [ $this->root_, 'handle_success' ], func_get_args() );
         }
         else
         {
@@ -137,7 +135,7 @@ class AsyncStepsProtection
     {
         if ( end($this->adapter_stack_) === $this )
         {
-            call_user_func_array( [ $this->root_, 'success' ], func_get_args() );
+            call_user_func_array( [ $this->root_, 'handle_success' ], func_get_args() );
         }
         else
         {
@@ -172,17 +170,14 @@ class AsyncStepsProtection
         
         if ( $oq->valid() )
         {
-            if ( !$this->queue_ )
+            $q = $this->queue_;
+            
+            if ( !$q )
             {
                 $q = new \SplQueue();
                 $this->queue_ = $q;
             }
-            else
-            {
-                $q = $this->queue_;
-            }
 
-            
             for ( ; $oq->valid(); $oq->next() )
             {
                 $q->enqueue( $oq->current() );
