@@ -30,7 +30,6 @@ class AsyncSteps
     private $state_;
     private $next_args_;
     private $execute_event_ = null;
-    private $limit_event_ = null;
     
     /**
      * C-tor
@@ -160,37 +159,32 @@ class AsyncSteps
      * @ignore Do not use directly, not standard API
      * @internal
      */
-    public function handle_success()
+    public function handle_success( $args )
     {
-        $this->next_args_ = func_get_args();
+        $this->next_args_ = $args;
         
-        if ( !count( $this->adapter_stack_ ) )
+        $aspstack = &$this->adapter_stack_;
+        
+        if ( !count( $aspstack ) )
         {
             // Not inside AsyncSteps execution
             throw new \FutoIn\Error( \FutoIn\Error::InternalError );
         }
         
-        for(;;)
+        do
         {
-            $asp = end( $this->adapter_stack_ );
+            $asp = array_pop( $aspstack );
             
             if ( $asp->limit_event_ )
             {
                 AsyncTool::cancelCall( $asp->limit_event_ );
                 $asp->limit_event_ = null;
             }
-            
-            //--
-            array_pop( $this->adapter_stack_ );
-            
-            if ( !$this->adapter_stack_ ||
-                 !end( $this->adapter_stack_ )->queue_->isEmpty() )
-            {
-                break;
-            }
         }
+        while ( $aspstack &&
+                end( $aspstack )->queue_->isEmpty() );
 
-        if ( $this->adapter_stack_ ||
+        if ( $aspstack ||
              !$this->queue_->isEmpty() )
         {
             $this->execute_event_ = AsyncTool::callLater( [$this, 'execute'] );
@@ -233,10 +227,12 @@ class AsyncSteps
     public function handle_error( $name )
     {
         $this->next_args_ = array();
+        
+        $aspstack = &$this->adapter_stack_;
 
-        while ( count( $this->adapter_stack_ ) )
+        while ( count( $aspstack ) )
         {
-            $asp = end( $this->adapter_stack_ );
+            $asp = end( $aspstack );
             
             if ( $asp->limit_event_ )
             {
@@ -247,11 +243,12 @@ class AsyncSteps
             if ( $asp->oncancel_ )
             {
                 call_user_func( $asp->oncancel_, $asp );
+                $asp->oncancel_ = null;
             }
             
             if ( $asp->onerror_ )
             {
-                $oc = count( $this->adapter_stack_ );
+                $oc = count( $aspstack );
 
                 // Supress non-empty sub-steps error
                 $asp->queue_ = null;
@@ -266,17 +263,23 @@ class AsyncSteps
                 }
                 
                 // onError stack may decreases on success()
-                if ( $oc !== count( $this->adapter_stack_ ) )
+                if ( $oc !== count( $aspstack ) )
                 {
                     return;
                 }
             }
 
-            array_pop( $this->adapter_stack_ );
+            array_pop( $aspstack );
         }
         
         // Reach the bottom of error handler stack. End execution. Cleanup.
         $this->queue_ = new \SplQueue(); // No clear() method so far PHP #60759
+        
+        if ( $this->execute_event_ !== null )
+        {
+            AsyncTool::cancelCall( $this->execute_event_ );
+            $this->execute_event_ = null;
+        }
     }
     
     /**
@@ -287,20 +290,7 @@ class AsyncSteps
      */
     public function setTimeout( $timeout_ms )
     {
-        if ( $this->limit_event_ )
-        {
-            AsyncTool::cancelCall( $this->limit_event_ );
-        }
-        
-        $this->limit_event_ = AsyncTool::callLater(
-            function(){
-                AsyncTool::cancelCall( $this->limit_event_ );
-                $this->limit_event_ = null;
-
-                $this->handle_error( \FutoIn\Error::Timeout );
-            },
-            $timeout_ms
-        );
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
     
     /**
@@ -326,9 +316,17 @@ class AsyncSteps
      */
     public function execute()
     {
-        if ( $this->adapter_stack_ )
+        if ( $this->execute_event_ !== null )
         {
-            $q = end( $this->adapter_stack_ )->queue_;
+            AsyncTool::cancelCall( $this->execute_event_ );
+            $this->execute_event_ = null;
+        }
+        
+        $aspstack = &$this->adapter_stack_;
+        
+        if ( $aspstack )
+        {
+            $q = end( $aspstack )->queue_;
         }
         else
         {
@@ -340,26 +338,19 @@ class AsyncSteps
             return;
         }
         
-        if ( $this->execute_event_ !== null )
-        {
-            AsyncTool::cancelCall( $this->execute_event_ );
-            $this->execute_event_ = null;
-        }
-        
         $current = $q->dequeue();
         
         // Runtime optimization
         if ( $current->func === null )
         {
-            $this->handle_success();
-            $this->next_args_ = array();
+            $this->handle_success([]);
             return;
         }
         
         $q->rewind(); // Make sure inner add() are insert in front
         
         $asp_cls = $this->state()->{self::STATE_ASP_CLASS};
-        $asp = new $asp_cls( $this, $this->adapter_stack_ );
+        $asp = new $asp_cls( $this, $aspstack );
         
         $next_args = &$this->next_args_;
         unset( $this->next_args_ ); //yep
@@ -370,12 +361,12 @@ class AsyncSteps
         {
             $asp->onerror_ = $current->onerror ;
             $asp->oncancel_ = null;
-            $this->adapter_stack_[] = $asp;
+            $aspstack[] = $asp;
             
-            $oc = count( $this->adapter_stack_ );
+            $oc = count( $aspstack );
             call_user_func_array( $current->func, $next_args );
             
-            if ( $oc === count( $this->adapter_stack_ ) )
+            if ( $oc === count( $aspstack ) )
             {
                 // If inner add(), continue to that one
                 if ( $asp->queue_ )
@@ -408,15 +399,17 @@ class AsyncSteps
      */
     public function cancel()
     {
-        if ( $this->limit_event_ )
+        if ( $this->execute_event_ !== null )
         {
-            AsyncTool::cancelCall( $this->limit_event_ );
-            $this->limit_event_ = null;
+            AsyncTool::cancelCall( $this->execute_event_ );
+            $this->execute_event_ = null;
         }
+        
+        $aspstack = &$this->adapter_stack_;
 
-        while ( count( $this->adapter_stack_ ) )
+        while ( count( $aspstack ) )
         {
-            $asp = end( $this->adapter_stack_ );
+            $asp = array_pop( $aspstack );
             
             if ( $asp->limit_event_ )
             {
@@ -426,10 +419,8 @@ class AsyncSteps
             
             if ( $asp->oncancel_ )
             {
-                call_user_func( $asp->oncancel_, $this );
+                call_user_func( $asp->oncancel_, $asp );
             }
-            
-            array_pop( $this->adapter_stack_ );
         }
         
         // End execution. Cleanup.

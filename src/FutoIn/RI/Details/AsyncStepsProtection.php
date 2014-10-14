@@ -75,7 +75,7 @@ class AsyncStepsProtection
         if ( ( end($this->adapter_stack_) === $this ) &&
              !$this->queue_ )
         {
-            call_user_func_array( [ $this->root_, 'handle_success' ], func_get_args() );
+            $this->root_->handle_success( func_get_args() );
         }
         else
         {
@@ -133,9 +133,10 @@ class AsyncStepsProtection
     
     public function __invoke()
     {
-        if ( end($this->adapter_stack_) === $this )
+        if ( ( end($this->adapter_stack_) === $this ) &&
+             !$this->queue_ )
         {
-            call_user_func_array( [ $this->root_, 'handle_success' ], func_get_args() );
+            $this->root_->handle_success( func_get_args() );
         }
         else
         {
