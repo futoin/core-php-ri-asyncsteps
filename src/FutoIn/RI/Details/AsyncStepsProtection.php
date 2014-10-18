@@ -18,47 +18,58 @@ class AsyncStepsProtection
 {
     use AsyncStepsStateAccessorTrait;
     
-    private $root_;
-    private $adapter_stack_;
-    public $onerror_;
-    public $oncancel_;
-    public $queue_ = null;
-    public $limit_event_ = null;
+    private $root;
+    private $adapter_stack;
+    public $_onerror;
+    public $_oncancel;
+    public $_queue = null;
+    public $_limit_event = null;
     
     
     public function __construct( $root, &$adapter_stack )
     {
-        $this->root_ = $root;
-        $this->adapter_stack_ = &$adapter_stack;
+        $this->root = $root;
+        $this->adapter_stack = &$adapter_stack;
+    }
+    
+    public function _cleanup()
+    {
+        $this->root = null;
+        unset( $this->adapter_stack );
+        $this->_onerror = null;
+        $this->_oncancel = null;
+        $this->_queue = null;
+    }
+    
+    private function _sanityCheck()
+    {
+        if ( !$this->root ||
+             ( end($this->adapter_stack) !== $this ) )
+        {
+            throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+        }
     }
     
     public function add( callable $func, callable $onerror=null )
     {
-        if ( end($this->adapter_stack_) === $this )
-        {
-            $o = new \StdClass();
-            $o->func = $func;
-            $o->onerror = $onerror;
-            
-            $q = $this->queue_;
-            
-            if ( !$q )
-            {
-                $q = new \SplQueue();
-                $this->queue_ = $q;
-            }
-
-            $q->enqueue( $o );
-            
-            return $this;
-        }
+        $this->_sanityCheck();
         
-        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+        $q = $this->_queue;
+        
+        if ( !$q )
+        {
+            $q = new \SplQueue();
+            $this->_queue = $q;
+        }
+
+        $q->enqueue( [ $func, $onerror ] );
+        
+        return $this;
     }
     
     public function parallel( callable $onerror=null )
     {
-        $p = new ParallelStep( $this->root_, $this );
+        $p = new ParallelStep( $this->root, $this );
         $this->add( function($as) use ( $p ){
             $p->executeParallel($as);
         }, $onerror );
@@ -67,15 +78,16 @@ class AsyncStepsProtection
     
     public function state()
     {
-        return $this->root_->state();
+        return $this->root->state();
     }    
 
     public function success()
     {
-        if ( ( end($this->adapter_stack_) === $this ) &&
-             !$this->queue_ )
+        $this->_sanityCheck();
+        
+        if ( !$this->_queue )
         {
-            $this->root_->handle_success( func_get_args() );
+            $this->root->_handle_success( func_get_args() );
         }
         else
         {
@@ -86,10 +98,11 @@ class AsyncStepsProtection
     
     public function successStep()
     {
-        if ( $this->queue_ )
+        $this->_sanityCheck();
+        
+        if ( $this->_queue )
         {
-            $this->add( [$this, 'success'] );
-            $this->queue_->top()->func = null;
+            $this->_queue->enqueue( [ null, null ] );
         }
         else
         {
@@ -100,10 +113,11 @@ class AsyncStepsProtection
     
     public function error( $name, $error_info=null )
     {
-        if ( ( end($this->adapter_stack_) === $this ) &&
-             !$this->queue_ )
+        $this->_sanityCheck();
+        
+        if ( !$this->_queue )
         {
-            $this->root_->error( $name, $error_info );
+            $this->root->error( $name, $error_info );
         }
         else
         {
@@ -114,18 +128,18 @@ class AsyncStepsProtection
 
     public function setTimeout( $timeout_ms )
     {
-        if ( $this->limit_event_ )
+        if ( $this->_limit_event )
         {
-            \FutoIn\RI\AsyncTool::cancelCall( $this->limit_event_ );
+            \FutoIn\RI\AsyncTool::cancelCall( $this->_limit_event );
         }
         
-        $this->limit_event_ = \FutoIn\RI\AsyncTool::callLater(
+        $this->_limit_event = \FutoIn\RI\AsyncTool::callLater(
             function(){
-                \FutoIn\RI\AsyncTool::cancelCall( $this->limit_event_ );
-                $this->limit_event_ = null;
+                \FutoIn\RI\AsyncTool::cancelCall( $this->_limit_event );
+                $this->_limit_event = null;
 
                 // Skip own sanity checks for top-of-stack
-                $this->root_->handle_error( \FutoIn\Error::Timeout );
+                $this->root->_handle_error( \FutoIn\Error::Timeout );
             },
             $timeout_ms
         );
@@ -133,10 +147,11 @@ class AsyncStepsProtection
     
     public function __invoke()
     {
-        if ( ( end($this->adapter_stack_) === $this ) &&
-             !$this->queue_ )
+        $this->_sanityCheck();
+        
+        if ( !$this->_queue )
         {
-            $this->root_->handle_success( func_get_args() );
+            $this->root->_handle_success( func_get_args() );
         }
         else
         {
@@ -147,10 +162,16 @@ class AsyncStepsProtection
     
     public function setCancel( callable $oncancel )
     {
-        $this->oncancel_ = $oncancel;
+        $this->_oncancel = $oncancel;
     }
     
     public function execute()
+    {
+        // not allowed
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    public function cancel()
     {
         // not allowed
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
@@ -160,7 +181,7 @@ class AsyncStepsProtection
     {
         assert( $other instanceof \FutoIn\RI\AsyncSteps );
         
-        if ( end($this->adapter_stack_) !== $this )
+        if ( end($this->adapter_stack) !== $this )
         {
             throw new \FutoIn\Error( \FutoIn\Error::InternalError );
         }
@@ -171,12 +192,12 @@ class AsyncStepsProtection
         
         if ( $oq->valid() )
         {
-            $q = $this->queue_;
+            $q = $this->_queue;
             
             if ( !$q )
             {
                 $q = new \SplQueue();
-                $this->queue_ = $q;
+                $this->_queue = $q;
             }
 
             for ( ; $oq->valid(); $oq->next() )
@@ -208,8 +229,8 @@ class AsyncStepsProtection
      * @ignore
      * @internal Do not use directly, not standard API for INTERNAL USE
      */
-    public function getRoot()
+    public function _getRoot()
     {
-        return $this->root_;
+        return $this->root;
     }
 }

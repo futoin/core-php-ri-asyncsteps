@@ -18,22 +18,28 @@ class ParallelStep
 {
     use AsyncStepsStateAccessorTrait;
     
-    private $root_;
-    private $as_;
-    private $parallel_steps_;
+    private $root;
+    private $as;
+    private $parallel_steps;
     private $complete_count = 0;
-    private $error_ = null;
     
     public function __construct( $root, $async_iface )
     {
-        $this->root_ = $root;
-        $this->as_ = $async_iface;
-        $this->parallel_steps_ = array();
+        $this->root = $root;
+        $this->as = $async_iface;
+        $this->parallel_steps = array();
+    }
+    
+    private function _cleanup()
+    {
+        $this->root = null;
+        $this->as = null;
+        $this->parallel_steps = null;
     }
 
     public function add( callable $func, callable $onerror=null )
     {
-        $this->parallel_steps_[] = array( $func, $onerror );
+        $this->parallel_steps[] = array( $func, $onerror );
         return $this;
     }
     
@@ -44,23 +50,17 @@ class ParallelStep
     
     public function state()
     {
-        return $this->as_->state();
+        return $this->as->state();
     }
     
     public function success()
     {
         $this->complete_count += 1;
         
-        if ( $this->complete_count === count( $this->parallel_steps_ ) )
+        if ( $this->complete_count === count( $this->parallel_steps ) )
         {
-            if ( $this->error_ )
-            {
-                $this->root_->handle_error( $this->error_ );
-            }
-            else
-            {
-                $this->as_->success();
-            }
+            $this->as->success();
+            $this->_cleanup();
         }
     }
     
@@ -69,10 +69,14 @@ class ParallelStep
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
     
-    public function error( $name, $error_info=null )
+    public function error( $name, $errorinfo=null )
     {
-        $this->error_ = $name;
-        $this->success();
+        try
+        {
+            $this->as->error( $name );
+        }
+        catch ( \Exception $e )
+        {}
     }
     
     public function __invoke()
@@ -98,20 +102,20 @@ class ParallelStep
      */
     public function executeParallel($as)
     {
-        $root = $as->getRoot();
+        $root = $as->_getRoot();
         
-        if ( $root !== $this->root_ )
+        if ( $root !== $this->root )
         {
             $p = clone $this;
-            $p->root_ = $root;
+            $p->root = $root;
             $p->executeParallel( $as );
             unset( $p );
             return;
         }
         
-        $this->as_ = $as;
+        $this->as = $as;
         
-        if ( empty( $this->parallel_steps_ ) )
+        if ( empty( $this->parallel_steps ) )
         {
             $this->success();
             return;
@@ -119,34 +123,40 @@ class ParallelStep
         
         $as->setCancel([ $this, 'cancel']);
         
-        $as_cls = get_class( $this->root_ );
+        $ascls = get_class( $this->root );
         
-        $plist =  $this->parallel_steps_;
-        $this->parallel_steps_ = array();
+        $plist =  $this->parallel_steps;
+        $this->parallel_steps = array();
         
         $success_func = function($as){
             $as->success();
             $this->success();
         };
         
-        $error_func = function( $as, $name ){
+        $errorfunc = function( $as, $name ){
             $this->error( $name );
         };
         
+        $state = $as->state();
+        
         foreach ( $plist as $ps )
         {
-            $s = new $as_cls( $this->as_->state() );
+            $s = new $ascls( $state );
             
             $s->add(
-                function( $as ) use ( $ps, $success_func ) {
+                function( $as ) use ( $ps ) {
                     $as->add(  $ps[0], $ps[1] );
-                    $as->add( $success_func );
                 },
-                $error_func
+                $errorfunc
             );
+            $s->add( $success_func );
             
-            $this->parallel_steps_[] = $s;
-
+            $this->parallel_steps[] = $s;
+        }
+        
+        // Intentional, to properly cancel
+        foreach ( $this->parallel_steps as $s )
+        {
             $s->execute();
         }
     }
@@ -157,10 +167,11 @@ class ParallelStep
      */
     public function cancel()
     {
-        foreach ( $this->parallel_steps_ as $s )
+        foreach ( $this->parallel_steps as $s )
         {
             $s->cancel();
         }
+        $this->_cleanup();
     }
     
     public function execute()

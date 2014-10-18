@@ -5,7 +5,8 @@
  * @author Andrey Galkin
   */
 
-use \FutoIn\RI\AsyncToolTest as AsyncToolTest;
+use \FutoIn\RI\AsyncToolTest;
+use \FutoIn\RI\AsyncTool;
 
 /**
  * @ignore
@@ -554,6 +555,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $as->state()->error_called = false;
 
         $parallel = $as->parallel(function( \FutoIn\AsyncSteps $as, $name ){
+            $as->found_error = $name;
             $as->state()->error_called = true;
         });
         
@@ -575,6 +577,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
             }
         );
         
+        
         // Initialize parallel
         $as->execute();
 
@@ -594,37 +597,27 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
 
         // Auto-added final success
         AsyncToolTest::nextEvent();
-        AsyncToolTest::nextEvent();
 
         $this->assertTrue(
             $as->state()->first_called,
             "First step was not called"
         );
-        $this->assertTrue(
-            $as->state()->second_called,
-            "Second step was not called"
-        );
         $this->assertFalse(
-            $as->state()->error_called,
-            "Error step was called"
+            $as->state()->second_called,
+            "Second step was called"
         );
-        
-        $this->assertHasEvents();
-        
-        // Auto-added final success
-        AsyncToolTest::nextEvent();
-        AsyncToolTest::nextEvent();
-        
         $this->assertTrue(
             $as->state()->error_called,
             "Error step was not called"
         );
-        
+
         $this->assertFalse(
             $as->state()->final_called,
             "Final step was called"
         );
 
+        $this->assertEquals( 'MyError', $as->found_error );
+        
         $this->assertNoEvents();
     }
     
@@ -639,6 +632,7 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
 
         $as->add(function($as){
             $parallel = $as->parallel(function( \FutoIn\AsyncSteps $as, $name ){
+                $as->found_error = $name;
                 $as->state()->error_called = true;
             });
             
@@ -681,27 +675,15 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
 
         // Auto-added final success
         AsyncToolTest::nextEvent();
-        AsyncToolTest::nextEvent();
 
         $this->assertTrue(
             $as->state()->first_called,
             "First step was not called"
         );
-        $this->assertTrue(
-            $as->state()->second_called,
-            "Second step was not called"
-        );
         $this->assertFalse(
-            $as->state()->error_called,
-            "Error step was called"
+            $as->state()->second_called,
+            "Second step was called"
         );
-        
-        $this->assertHasEvents();
-        
-        // Auto-added final success
-        AsyncToolTest::nextEvent();
-        AsyncToolTest::nextEvent();
-        
         $this->assertTrue(
             $as->state()->error_called,
             "Error step was not called"
@@ -711,6 +693,8 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
             $as->state()->final_called,
             "Final step was called"
         );
+        
+        $this->assertEquals( 'MyError', $as->found_error );
 
         $this->assertNoEvents();
     }
@@ -1208,6 +1192,57 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         AsyncToolTest::nextEvent();
         $this->assertNoEvents();
         $this->assertTrue( $as->final_called, "Final step was not called" );
+    }
+    
+    /**
+     * Situations when control is passed to external step machines
+     * with setCancel and/or setTimeout()
+     */
+    
+    public function testAsyncError()
+    {
+        $as = $this->as;
+        $as->executed = false;
+        
+        $as->add( function($as){
+            $as->setCancel(function(){});
+            AsyncTool::callLater(function() use ($as) {
+                $as->success( 'MyValue' );
+            });
+        })->add( function($as, $value ){
+            $as->executed = ( $value === 'MyValue' ); 
+        });
+        
+        $as->execute();
+        AsyncToolTest::run();
+        $this->assertTrue( $as->executed );
+    }
+    
+    public function testAsyncSuccess()
+    {
+        $as = $this->as;
+        $as->executed = false;
+        
+        $as->add(
+            function($as){
+                $as->setCancel(function(){});
+                AsyncTool::callLater(function() use ($as) {
+                    try
+                    {
+                        $as->error( 'MyError' );
+                    }
+                    catch ( \Exception $e )
+                    {}
+                });
+            },
+            function($as, $err ){
+                $as->executed = ( $err === 'MyError' ); 
+            }
+        );
+        
+        $as->execute();
+        AsyncToolTest::run();
+        $this->assertTrue( $as->executed );
     }
 }
 
