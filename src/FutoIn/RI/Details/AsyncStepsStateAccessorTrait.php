@@ -1,6 +1,5 @@
 <?php
 /**
- * @package FutoIn\Core\PHP\RI\AsyncSteps
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */

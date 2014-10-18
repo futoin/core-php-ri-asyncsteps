@@ -20,7 +20,7 @@ class AsyncToolImpl
     {
         $t = new \StdClass();
         $t->id = \PHPDaemon\Core\Timer::add( function() use ($cb, $t){
-            $this->cancelCall( $t ):
+            $this->cancelCall( $t );
             $cb();
         }, $delay_ms );
         return $t;

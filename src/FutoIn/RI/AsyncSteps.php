@@ -1,6 +1,7 @@
 <?php
 /**
- * @package FutoIn\Core\PHP\RI\AsyncSteps
+ * Definition of main package interface - AsyncSteps
+ *
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
