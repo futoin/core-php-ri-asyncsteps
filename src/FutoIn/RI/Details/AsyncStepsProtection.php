@@ -179,12 +179,12 @@ class AsyncStepsProtection
     
     public function copyFrom( \FutoIn\AsyncSteps $other )
     {
-        assert( $other instanceof \FutoIn\RI\AsyncSteps );
-        
-        if ( end($this->adapter_stack) !== $this )
+        if ( ! ( $other instanceof \FutoIn\RI\AsyncSteps ) )
         {
             throw new \FutoIn\Error( \FutoIn\Error::InternalError );
         }
+        
+        $this->_sanityCheck();
         
         // Copy steps
         $oq = $other->getInnerQueue();

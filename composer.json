@@ -12,7 +12,7 @@
     "homepage" : "http://futoin.org",
     "require" : {
         "php" : "~5.5",
-        "futoin/core-php-api" : "~0.3",
+        "futoin/core-php-api" : "~0.5.2",
         "ext-spl": "*"
     },
     "require-dev" : {

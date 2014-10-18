@@ -1244,6 +1244,307 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         AsyncToolTest::run();
         $this->assertTrue( $as->executed );
     }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootAddException()
+    {
+        $as = $this->as;
+        
+        $as->add( function($as){
+            $as->add(function($as){
+                $as->success();
+            });
+        } );
+        
+        $as->execute();
+        $as->add( function($as){} );
+    }
+    
+    public function testSanityCheck()
+    {
+        $as = $this->as;
+        
+        $as->add(
+        function($as){
+            $ras = $as;
+            $as->add(function($as) use ($ras) {
+                $ras->success();
+            });
+        },
+        function($as, $err)
+        {
+            $this->assertEquals( 'InternalError', $err );
+        });
+        
+        $as->execute();
+        AsyncToolTest::run();
+    }
+
+    public function testInvalidSuccess()
+    {
+        $as = $this->as;
+        
+        $as->add(
+        function($as){
+            $as->add(function($as){
+                $as->success();
+            });
+            $as->success();
+        },
+        function($as, $err)
+        {
+            $this->assertEquals( 'InternalError', $err );
+        });
+        
+        $as->execute();
+        AsyncToolTest::run();
+    }
+    
+    public function testInvalidInvoke()
+    {
+        $as = $this->as;
+        
+        $as->add(
+        function($as){
+            $as->add(function($as){
+                $as->success();
+            });
+            $as();
+        },
+        function($as, $err)
+        {
+            $this->assertEquals( 'InternalError', $err );
+            $as();
+        });
+        
+        $as->execute();
+        AsyncToolTest::run();
+    }
+    
+    public function testInvalidError()
+    {
+        $as = $this->as;
+        
+        $as->add(
+        function($as){
+            $as->setTimeout( 10 );
+            $as->setTimeout( 20 );
+            $as->add(function($as){
+                $as->success();
+            });
+            $as->error( 'MyError' );
+        },
+        function($as, $err)
+        {
+            $this->assertEquals( 'InternalError', $err );
+        });
+        
+        $as->execute();
+        AsyncToolTest::run();
+    }
+    
+    public function testInvalidControlCalls()
+    {
+        $as = $this->as;
+        
+        $as->add(
+            function($as){
+                $as->execute();
+                $this->assertFalse( true );
+            },
+            function($as, $err)
+            {
+                $this->assertEquals( 'InternalError', $err );
+                $as();
+            }
+        )->add(
+            function($as){
+                $as->cancel();
+                $this->assertFalse( true );
+            },
+            function($as, $err)
+            {
+                $this->assertEquals( 'InternalError', $err );
+                $as();
+            }
+        )->add(
+            function($as){
+                clone $as;
+                $this->assertFalse( true );
+            },
+            function($as, $err)
+            {
+                $this->assertEquals( 'InternalError', $err );
+                $as();
+            }
+        )->add(
+            function($as){
+                $as->copyFrom( new \StdClass );
+                $this->assertFalse( true );
+            },
+            function($as, $err)
+            {
+                $this->assertEquals( 'InternalError', $err );
+                $as();
+            }
+        );
+        
+        $as->execute();
+        AsyncToolTest::run();
+    }
+
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootSuccessException()
+    {
+        $this->as->success();
+    }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootSuccessStepException()
+    {
+        $this->as->successStep();
+    }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootHandleSuccessException()
+    {
+        $this->as->_handle_success( [] );
+    }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootTimeoutException()
+    {
+        $this->as->setTimeout( 0 );
+    }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootSetCancelException()
+    {
+        $this->as->setCancel( function($as){} );
+    }
+    
+    /**
+     * @expectedException \FutoIn\Error
+     */
+    public function testRootInvokeException()
+    {
+        $as = $this->as;
+        $as();
+    }
+    
+    public function testErrorOverride()
+    {
+        $as = $this->as;
+        
+        $as->found_error = '';
+        
+        $as->add(
+            function($as){
+                $as->add(
+                    function($as){
+                        $as->error('MyError');
+                    },
+                    function($as, $err){
+                        $as->error('OtherError');
+                    }
+                );
+            },
+            function($as, $err){
+                $as->found_error = $err;
+            }
+        );
+        
+        $as->execute();
+        AsyncToolTest::run();
+        $this->assertEquals( 'OtherError', $as->found_error );
+    }
+    
+    public function testExecuteEmpty()
+    {
+         $this->as->execute();
+         $this->assertTrue( true );
+    }
+    
+    public function testAsyncToolTestInit()
+    {
+         AsyncToolTest::init();
+         $this->assertTrue( true );
+    }
+
+    public function testScopedStepsInit()
+    {
+         $val = &AsyncToolTest::getEvents();
+         $val = null;
+         $as = new \FutoIn\RI\ScopedSteps();
+         $as->run();
+         $this->assertTrue( is_array( AsyncToolTest::getEvents() ) );
+    }
+
+    public function testOuterAsyncError()
+    {
+        $as = $this->as;
+        
+        $as->add(
+            function($as){
+                $as->success();
+            }
+        )->add(
+            function($as){
+                $as->success();
+            }
+        );
+        
+        $as->execute();
+        
+        try
+        {
+            $as->error( 'MyError' );
+        }
+        catch ( \FutoIn\Error $e )
+        {
+            $this->assertTrue( true );
+        }
+    }
+    
+    public function testModel()
+    {
+        $model_as = new \FutoIn\RI\AsyncSteps();
+        $model_as->model_run = false;
+        $model_as->add(
+            function($as){
+                $as->model_run = true;
+                $as->success();
+            }
+        );
+        
+        $as = $this->as;
+        
+        $as->copyFrom( $model_as );
+        $as->add(
+            function($as) use ( $model_as ) {
+                $this->assertTrue( $as->model_run );
+                $as->model_run = false;
+                $as->copyFrom( $model_as );
+                $as->successStep();
+            }
+        );
+        
+        $as->execute();
+        AsyncToolTest::run();
+        $this->assertTrue( $as->model_run );
+    }
 }
 
 /**
