@@ -1,5 +1,7 @@
 <?php
 /**
+ * Re-usable state accessing code
+ * @internal
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
@@ -14,6 +16,8 @@ trait AsyncStepsStateAccessorTrait
 {
     /**
      * state() access through AsyncSteps interface / set value
+     * @param string $name state variable name
+     * @param mixed $value state variable value
      */
     public function __set( $name, $value )
     {
@@ -22,6 +26,8 @@ trait AsyncStepsStateAccessorTrait
 
     /**
      * state() access through AsyncSteps interface / get value
+     * @param string $name state variable name
+     * @return mixed $value state variable value
      */
     public function &__get( $name )
     {
@@ -29,7 +35,9 @@ trait AsyncStepsStateAccessorTrait
     }
 
     /**
-     * state() access through AsyncSteps interface / check value
+     * state() access through AsyncSteps interface / check value exists
+     * @param string $name state variable name
+     * @return bool
      */
     public function __isset( $name )
     {
@@ -38,6 +46,7 @@ trait AsyncStepsStateAccessorTrait
     
     /**
      * state() access through AsyncSteps interface / delete value
+     * @param string $name state variable name
      */
     public function __unset($name)
     {

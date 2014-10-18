@@ -1,4 +1,12 @@
 <?php
+/**
+ * Ignore
+ *
+ * @internal
+ * @copyright 2014 FutoIn Project (http://futoin.org)
+ * @author Andrey Galkin
+ */
+
 
 namespace FutoIn\RI\PHPD;
 

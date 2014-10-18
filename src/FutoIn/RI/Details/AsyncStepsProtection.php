@@ -1,5 +1,7 @@
 <?php
 /**
+ * Definition of actual execution AsyncSteps "protecting" proxy
+ * @internal
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
@@ -186,7 +188,7 @@ class AsyncStepsProtection
         $this->_sanityCheck();
         
         // Copy steps
-        $oq = $other->getInnerQueue();
+        $oq = $other->_getInnerQueue();
         $oq->rewind();
         
         if ( $oq->valid() )

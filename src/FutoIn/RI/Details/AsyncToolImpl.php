@@ -1,5 +1,7 @@
 <?php
 /**
+ * Definition of base for custom AsyncTool implementation
+ *
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
@@ -29,12 +31,16 @@ abstract class AsyncToolImpl
     /**
      * Schedule $cb for later execution after $delays_ms milliseconds
      *
-     * @return Any value, which serves as reference to the scheduled item
+     * @param callable $cb Callable to execute
+     * @param int $delay_ms Required delay in milliseconds
+     *
+     * @return mixed Any value, which serves as reference to the scheduled item
      */
     abstract public function callLater( $cb, $delay_ms=0 );
     
     /**
      * Cancel previously scheduled $ref item
+     * @param mixed $ref Any value returned from callLater()
      */
     abstract public function cancelCall( $ref );
 }

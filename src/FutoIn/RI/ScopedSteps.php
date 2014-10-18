@@ -1,5 +1,8 @@
 <?php
 /**
+ * A helper class to use in regular one-request one-process PHP model with
+ * no additional event frameworks
+ * 
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
@@ -20,7 +23,11 @@ namespace FutoIn\RI;
 class ScopedSteps
     extends AsyncSteps
 {
-    /** @see AsyncSteps */
+    /**
+     * Init
+     * @see AsyncSteps::__construct()
+     * @param object $state Optionally, pass state object
+     */
     public function __construct( $state=null )
     {
         // TODO: check that event loop is AsyncToolTest

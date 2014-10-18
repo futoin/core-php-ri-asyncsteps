@@ -605,75 +605,8 @@ AsyncSteps reference implementation as per &quot;FTN12: FutoIn Async API&quot;
 * This class implements: FutoIn\AsyncSteps
 
 
-Constants
-----------
 
 
-### STATE_ASP_CLASS
-
-    const STATE_ASP_CLASS = '_aspcls'
-
-
-
-
-
-Properties
-----------
-
-
-### $queue_
-
-    private mixed $queue_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $adapter_stack_
-
-    private mixed $adapter_stack_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $state_
-
-    private mixed $state_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $next_args_
-
-    private mixed $next_args_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $execute_event_
-
-    private mixed $execute_event_ = null
-
-
-
-
-
-* Visibility: **private**
 
 
 Methods
@@ -682,9 +615,9 @@ Methods
 
 ### __construct
 
-    mixed FutoIn\RI\AsyncSteps::__construct($state)
+    mixed FutoIn\RI\AsyncSteps::__construct(object $state)
 
-C-tor
+Init
 
 
 
@@ -692,13 +625,13 @@ C-tor
 
 
 #### Arguments
-* $state **mixed** - &lt;p&gt;for INTERNAL use only&lt;/p&gt;
+* $state **object** - &lt;p&gt;for INTERNAL use only&lt;/p&gt;
 
 
 
 ### add
 
-    \FutoIn\RI\reference FutoIn\RI\AsyncSteps::add($func, $onerror)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::add(callable $func, \FutoIn\RI\calable $onerror)
 
 Add \$func step executor to end of current AsyncSteps level queue
 
@@ -708,17 +641,16 @@ Add \$func step executor to end of current AsyncSteps level queue
 
 
 #### Arguments
-* $func **mixed** - &lt;p&gt;void execute_callback( AsyncSteps as[, previous_success_args] )&lt;/p&gt;
-* $onerror **mixed** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
+* $func **callable** - &lt;p&gt;void execute_callback( AsyncSteps as[, previous_success_args] )&lt;/p&gt;
+* $onerror **FutoIn\RI\calable** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
 
 
 
 ### copyFrom
 
-    \FutoIn\RI\reference FutoIn\RI\AsyncSteps::copyFrom(\FutoIn\AsyncSteps $other)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::copyFrom(\FutoIn\RI\AsyncSteps $other)
 
 Copy steps from other AsyncSteps, useful for sub-step cloning
-\note Please see the specification for more information
 
 
 
@@ -726,26 +658,13 @@ Copy steps from other AsyncSteps, useful for sub-step cloning
 
 
 #### Arguments
-* $other **FutoIn\AsyncSteps**
-
-
-
-### __clone
-
-    mixed FutoIn\RI\AsyncSteps::__clone()
-
-PHP-specific: properly copy internal structures after cloning of AsyncSteps
-
-
-
-* Visibility: **public**
-
+* $other **[FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)** - &lt;p&gt;model AsyncSteps object for re-use&lt;/p&gt;
 
 
 
 ### parallel
 
-    \FutoIn\RI\Special FutoIn\RI\AsyncSteps::parallel($onerror)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::parallel(callable $onerror)
 
 Create special object to queue steps for execution in parallel
 
@@ -755,13 +674,13 @@ Create special object to queue steps for execution in parallel
 
 
 #### Arguments
-* $onerror **mixed** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
+* $onerror **callable** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
 
 
 
 ### state
 
-    \FutoIn\RI\State FutoIn\RI\AsyncSteps::state()
+    \StdClass FutoIn\RI\AsyncSteps::state()
 
 Access AsyncSteps state object
 
@@ -778,7 +697,7 @@ Access AsyncSteps state object
 
 Set "success" state of current step execution
 
-\note Please see the specification for constraints
+
 
 * Visibility: **public**
 
@@ -789,7 +708,8 @@ Set "success" state of current step execution
 
     mixed FutoIn\RI\AsyncSteps::successStep()
 
-Call success() or add sub-step with success() depending on presence of other sub-steps
+Call success() or add efficient dummy step equal to as.success() in behavior
+(depending on presence of other sub-steps)
 
 
 
@@ -800,7 +720,7 @@ Call success() or add sub-step with success() depending on presence of other sub
 
 ### error
 
-    mixed FutoIn\RI\AsyncSteps::error($name, $error_info)
+    mixed FutoIn\RI\AsyncSteps::error(string $name, string $error_info)
 
 Set "error" state of current step execution
 
@@ -810,17 +730,16 @@ Set "error" state of current step execution
 
 
 #### Arguments
-* $name **mixed** - &lt;p&gt;Type of error&lt;/p&gt;
-* $error_info **mixed** - &lt;p&gt;Error description to be put into &quot;error_info&quot; state field
-\note Please see the specification for constraints&lt;/p&gt;
+* $name **string** - &lt;p&gt;Type of error&lt;/p&gt;
+* $error_info **string** - &lt;p&gt;Error description to be put into &quot;error_info&quot; state field&lt;/p&gt;
 
 
 
 ### setTimeout
 
-    mixed FutoIn\RI\AsyncSteps::setTimeout($timeout_ms)
+    mixed FutoIn\RI\AsyncSteps::setTimeout(integer $timeout_ms)
 
-Delay further execution until success() or error() is called
+Delay further execution until as.success() or as.error() is called
 
 
 
@@ -828,8 +747,7 @@ Delay further execution until success() or error() is called
 
 
 #### Arguments
-* $timeout_ms **mixed** - &lt;p&gt;Timeout in milliseconds
-\note Please see the specification&lt;/p&gt;
+* $timeout_ms **integer** - &lt;p&gt;Timeout in milliseconds&lt;/p&gt;
 
 
 
@@ -869,7 +787,20 @@ Set cancellation callback
 
 Start execution of AsyncSteps
 
+It can be called only on root instance of AsyncSteps
 
+* Visibility: **public**
+
+
+
+
+### cancel
+
+    mixed FutoIn\RI\AsyncSteps::cancel()
+
+Cancel execution of AsyncSteps
+
+It can be called only on root instance of AsyncSteps
 
 * Visibility: **public**
 
@@ -878,7 +809,7 @@ Start execution of AsyncSteps
 
 ### __set
 
-    mixed FutoIn\RI\AsyncSteps::__set($name, $value)
+    mixed FutoIn\RI\AsyncSteps::__set(string $name, mixed $value)
 
 state() access through AsyncSteps interface / set value
 
@@ -888,14 +819,14 @@ state() access through AsyncSteps interface / set value
 
 
 #### Arguments
-* $name **mixed**
-* $value **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+* $value **mixed** - &lt;p&gt;state variable value&lt;/p&gt;
 
 
 
 ### __get
 
-    mixed FutoIn\RI\AsyncSteps::__get($name)
+    mixed FutoIn\RI\AsyncSteps::__get(string $name)
 
 state() access through AsyncSteps interface / get value
 
@@ -905,15 +836,15 @@ state() access through AsyncSteps interface / get value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 
 
 ### __isset
 
-    mixed FutoIn\RI\AsyncSteps::__isset($name)
+    boolean FutoIn\RI\AsyncSteps::__isset(string $name)
 
-state() access through AsyncSteps interface / check value
+state() access through AsyncSteps interface / check value exists
 
 
 
@@ -921,13 +852,13 @@ state() access through AsyncSteps interface / check value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 
 
 ### __unset
 
-    mixed FutoIn\RI\AsyncSteps::__unset($name)
+    mixed FutoIn\RI\AsyncSteps::__unset(string $name)
 
 state() access through AsyncSteps interface / delete value
 
@@ -937,7 +868,7 @@ state() access through AsyncSteps interface / delete value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 
 
@@ -957,42 +888,15 @@ Wrapper interface for singleton AsyncTools implementation
 
 
 
-Properties
-----------
-
-
-### $impl
-
-    private mixed $impl
-
-
-
-
-
-* Visibility: **private**
-* This property is **static**.
 
 
 Methods
 -------
 
 
-### __construct
-
-    mixed FutoIn\RI\AsyncTool::__construct()
-
-\note Not assumed to be instantiated
-
-
-
-* Visibility: **private**
-
-
-
-
 ### init
 
-    mixed FutoIn\RI\AsyncTool::init($impl)
+    mixed FutoIn\RI\AsyncTool::init(\FutoIn\RI\Details\AsyncToolImpl $impl)
 
 Install Async Tool implementation
 
@@ -1003,13 +907,13 @@ Install Async Tool implementation
 
 
 #### Arguments
-* $impl **mixed** - &lt;p&gt;AsyncTools implementation&lt;/p&gt;
+* $impl **[FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)** - &lt;p&gt;AsyncTools implementation&lt;/p&gt;
 
 
 
 ### callLater
 
-    \FutoIn\RI\Any FutoIn\RI\AsyncTool::callLater($cb, $delay_ms)
+    mixed FutoIn\RI\AsyncTool::callLater(callable $cb, integer $delay_ms)
 
 Schedule $cb for later execution after $delays_ms milliseconds
 
@@ -1020,14 +924,14 @@ Schedule $cb for later execution after $delays_ms milliseconds
 
 
 #### Arguments
-* $cb **mixed**
-* $delay_ms **mixed**
+* $cb **callable** - &lt;p&gt;Callable to execute&lt;/p&gt;
+* $delay_ms **integer** - &lt;p&gt;Required delay in milliseconds&lt;/p&gt;
 
 
 
 ### cancelCall
 
-    mixed FutoIn\RI\AsyncTool::cancelCall($ref)
+    boolean FutoIn\RI\AsyncTool::cancelCall(mixed $ref)
 
 Cancel previously scheduled $ref item
 
@@ -1038,7 +942,7 @@ Cancel previously scheduled $ref item
 
 
 #### Arguments
-* $ref **mixed**
+* $ref **mixed** - &lt;p&gt;Any value returned from callLater()&lt;/p&gt;
 
 
 
@@ -1062,75 +966,10 @@ and Unit Testing through nextEvent()
 
 
 
-Properties
-----------
-
-
-### $queue
-
-    private mixed $queue = null
-
-
-
-
-
-* Visibility: **private**
-* This property is **static**.
 
 
 Methods
 -------
-
-
-### __construct
-
-    mixed FutoIn\RI\Details\AsyncToolImpl::__construct()
-
-Any derived class should call this c-tor for future-compatibility
-
-
-
-* Visibility: **protected**
-* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
-
-
-
-
-### callLater
-
-    \FutoIn\RI\Details\Any FutoIn\RI\Details\AsyncToolImpl::callLater($cb, $delay_ms)
-
-Schedule $cb for later execution after $delays_ms milliseconds
-
-
-
-* Visibility: **public**
-* This method is **abstract**.
-* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
-
-
-#### Arguments
-* $cb **mixed**
-* $delay_ms **mixed**
-
-
-
-### cancelCall
-
-    mixed FutoIn\RI\Details\AsyncToolImpl::cancelCall($ref)
-
-Cancel previously scheduled $ref item
-
-
-
-* Visibility: **public**
-* This method is **abstract**.
-* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
-
-
-#### Arguments
-* $ref **mixed**
-
 
 
 ### nextEvent
@@ -1149,7 +988,7 @@ Wait and execute the next item in queue, if any
 
 ### hasEvents
 
-    mixed FutoIn\RI\AsyncToolTest::hasEvents()
+    boolean FutoIn\RI\AsyncToolTest::hasEvents()
 
 Check if any item is scheduled (for unit testing)
 
@@ -1177,7 +1016,7 @@ Reset event queue (for unit testing)
 
 ### getEvents
 
-    mixed FutoIn\RI\AsyncToolTest::getEvents()
+    array FutoIn\RI\AsyncToolTest::getEvents()
 
 Get internal item queue (for unit testing)
 
@@ -1203,6 +1042,20 @@ Run event loop until last event pending
 
 
 
+### __construct
+
+    mixed FutoIn\RI\Details\AsyncToolImpl::__construct()
+
+Any derived class should call this c-tor for future-compatibility
+
+
+
+* Visibility: **protected**
+* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
+
+
+
+
 ### init
 
     mixed FutoIn\RI\Details\AsyncToolImpl::init()
@@ -1215,6 +1068,43 @@ Install Async Tool implementation, call using derived class
 * This method is **static**.
 * This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
 
+
+
+
+### callLater
+
+    mixed FutoIn\RI\Details\AsyncToolImpl::callLater(callable $cb, integer $delay_ms)
+
+Schedule $cb for later execution after $delays_ms milliseconds
+
+
+
+* Visibility: **public**
+* This method is **abstract**.
+* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
+
+
+#### Arguments
+* $cb **callable** - &lt;p&gt;Callable to execute&lt;/p&gt;
+* $delay_ms **integer** - &lt;p&gt;Required delay in milliseconds&lt;/p&gt;
+
+
+
+### cancelCall
+
+    mixed FutoIn\RI\Details\AsyncToolImpl::cancelCall(mixed $ref)
+
+Cancel previously scheduled $ref item
+
+
+
+* Visibility: **public**
+* This method is **abstract**.
+* This method is defined by [FutoIn\RI\Details\AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
+
+
+#### Arguments
+* $ref **mixed** - &lt;p&gt;Any value returned from callLater()&lt;/p&gt;
 
 
 
@@ -1270,7 +1160,7 @@ Install Async Tool implementation, call using derived class
 
 ### callLater
 
-    \FutoIn\RI\Details\Any FutoIn\RI\Details\AsyncToolImpl::callLater($cb, $delay_ms)
+    mixed FutoIn\RI\Details\AsyncToolImpl::callLater(callable $cb, integer $delay_ms)
 
 Schedule $cb for later execution after $delays_ms milliseconds
 
@@ -1281,14 +1171,14 @@ Schedule $cb for later execution after $delays_ms milliseconds
 
 
 #### Arguments
-* $cb **mixed**
-* $delay_ms **mixed**
+* $cb **callable** - &lt;p&gt;Callable to execute&lt;/p&gt;
+* $delay_ms **integer** - &lt;p&gt;Required delay in milliseconds&lt;/p&gt;
 
 
 
 ### cancelCall
 
-    mixed FutoIn\RI\Details\AsyncToolImpl::cancelCall($ref)
+    mixed FutoIn\RI\Details\AsyncToolImpl::cancelCall(mixed $ref)
 
 Cancel previously scheduled $ref item
 
@@ -1299,7 +1189,7 @@ Cancel previously scheduled $ref item
 
 
 #### Arguments
-* $ref **mixed**
+* $ref **mixed** - &lt;p&gt;Any value returned from callLater()&lt;/p&gt;
 
 
 
@@ -1323,75 +1213,8 @@ Example:
 
 
 
-Constants
-----------
 
 
-### STATE_ASP_CLASS
-
-    const STATE_ASP_CLASS = '_aspcls'
-
-
-
-
-
-Properties
-----------
-
-
-### $queue_
-
-    private mixed $queue_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $adapter_stack_
-
-    private mixed $adapter_stack_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $state_
-
-    private mixed $state_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $next_args_
-
-    private mixed $next_args_
-
-
-
-
-
-* Visibility: **private**
-
-
-### $execute_event_
-
-    private mixed $execute_event_ = null
-
-
-
-
-
-* Visibility: **private**
 
 
 Methods
@@ -1400,9 +1223,9 @@ Methods
 
 ### __construct
 
-    mixed FutoIn\RI\AsyncSteps::__construct($state)
+    mixed FutoIn\RI\AsyncSteps::__construct(object $state)
 
-C-tor
+Init
 
 
 
@@ -1411,7 +1234,7 @@ C-tor
 
 
 #### Arguments
-* $state **mixed** - &lt;p&gt;for INTERNAL use only&lt;/p&gt;
+* $state **object** - &lt;p&gt;for INTERNAL use only&lt;/p&gt;
 
 
 
@@ -1430,7 +1253,7 @@ Execute all steps until nothing is left
 
 ### add
 
-    \FutoIn\RI\reference FutoIn\RI\AsyncSteps::add($func, $onerror)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::add(callable $func, \FutoIn\RI\calable $onerror)
 
 Add \$func step executor to end of current AsyncSteps level queue
 
@@ -1441,17 +1264,16 @@ Add \$func step executor to end of current AsyncSteps level queue
 
 
 #### Arguments
-* $func **mixed** - &lt;p&gt;void execute_callback( AsyncSteps as[, previous_success_args] )&lt;/p&gt;
-* $onerror **mixed** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
+* $func **callable** - &lt;p&gt;void execute_callback( AsyncSteps as[, previous_success_args] )&lt;/p&gt;
+* $onerror **FutoIn\RI\calable** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
 
 
 
 ### copyFrom
 
-    \FutoIn\RI\reference FutoIn\RI\AsyncSteps::copyFrom(\FutoIn\AsyncSteps $other)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::copyFrom(\FutoIn\RI\AsyncSteps $other)
 
 Copy steps from other AsyncSteps, useful for sub-step cloning
-\note Please see the specification for more information
 
 
 
@@ -1460,27 +1282,13 @@ Copy steps from other AsyncSteps, useful for sub-step cloning
 
 
 #### Arguments
-* $other **FutoIn\AsyncSteps**
-
-
-
-### __clone
-
-    mixed FutoIn\RI\AsyncSteps::__clone()
-
-PHP-specific: properly copy internal structures after cloning of AsyncSteps
-
-
-
-* Visibility: **public**
-* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
-
+* $other **[FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)** - &lt;p&gt;model AsyncSteps object for re-use&lt;/p&gt;
 
 
 
 ### parallel
 
-    \FutoIn\RI\Special FutoIn\RI\AsyncSteps::parallel($onerror)
+    \FutoIn\AsyncSteps FutoIn\RI\AsyncSteps::parallel(callable $onerror)
 
 Create special object to queue steps for execution in parallel
 
@@ -1491,13 +1299,13 @@ Create special object to queue steps for execution in parallel
 
 
 #### Arguments
-* $onerror **mixed** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
+* $onerror **callable** - &lt;p&gt;OPTIONAL: void error_callback( AsyncSteps as, error )&lt;/p&gt;
 
 
 
 ### state
 
-    \FutoIn\RI\State FutoIn\RI\AsyncSteps::state()
+    \StdClass FutoIn\RI\AsyncSteps::state()
 
 Access AsyncSteps state object
 
@@ -1515,7 +1323,7 @@ Access AsyncSteps state object
 
 Set "success" state of current step execution
 
-\note Please see the specification for constraints
+
 
 * Visibility: **public**
 * This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
@@ -1527,7 +1335,8 @@ Set "success" state of current step execution
 
     mixed FutoIn\RI\AsyncSteps::successStep()
 
-Call success() or add sub-step with success() depending on presence of other sub-steps
+Call success() or add efficient dummy step equal to as.success() in behavior
+(depending on presence of other sub-steps)
 
 
 
@@ -1539,7 +1348,7 @@ Call success() or add sub-step with success() depending on presence of other sub
 
 ### error
 
-    mixed FutoIn\RI\AsyncSteps::error($name, $error_info)
+    mixed FutoIn\RI\AsyncSteps::error(string $name, string $error_info)
 
 Set "error" state of current step execution
 
@@ -1550,17 +1359,16 @@ Set "error" state of current step execution
 
 
 #### Arguments
-* $name **mixed** - &lt;p&gt;Type of error&lt;/p&gt;
-* $error_info **mixed** - &lt;p&gt;Error description to be put into &quot;error_info&quot; state field
-\note Please see the specification for constraints&lt;/p&gt;
+* $name **string** - &lt;p&gt;Type of error&lt;/p&gt;
+* $error_info **string** - &lt;p&gt;Error description to be put into &quot;error_info&quot; state field&lt;/p&gt;
 
 
 
 ### setTimeout
 
-    mixed FutoIn\RI\AsyncSteps::setTimeout($timeout_ms)
+    mixed FutoIn\RI\AsyncSteps::setTimeout(integer $timeout_ms)
 
-Delay further execution until success() or error() is called
+Delay further execution until as.success() or as.error() is called
 
 
 
@@ -1569,8 +1377,7 @@ Delay further execution until success() or error() is called
 
 
 #### Arguments
-* $timeout_ms **mixed** - &lt;p&gt;Timeout in milliseconds
-\note Please see the specification&lt;/p&gt;
+* $timeout_ms **integer** - &lt;p&gt;Timeout in milliseconds&lt;/p&gt;
 
 
 
@@ -1612,7 +1419,21 @@ Set cancellation callback
 
 Start execution of AsyncSteps
 
+It can be called only on root instance of AsyncSteps
 
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+
+
+### cancel
+
+    mixed FutoIn\RI\AsyncSteps::cancel()
+
+Cancel execution of AsyncSteps
+
+It can be called only on root instance of AsyncSteps
 
 * Visibility: **public**
 * This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
@@ -1622,7 +1443,7 @@ Start execution of AsyncSteps
 
 ### __set
 
-    mixed FutoIn\RI\AsyncSteps::__set($name, $value)
+    mixed FutoIn\RI\AsyncSteps::__set(string $name, mixed $value)
 
 state() access through AsyncSteps interface / set value
 
@@ -1633,14 +1454,14 @@ state() access through AsyncSteps interface / set value
 
 
 #### Arguments
-* $name **mixed**
-* $value **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+* $value **mixed** - &lt;p&gt;state variable value&lt;/p&gt;
 
 
 
 ### __get
 
-    mixed FutoIn\RI\AsyncSteps::__get($name)
+    mixed FutoIn\RI\AsyncSteps::__get(string $name)
 
 state() access through AsyncSteps interface / get value
 
@@ -1651,15 +1472,15 @@ state() access through AsyncSteps interface / get value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 
 
 ### __isset
 
-    mixed FutoIn\RI\AsyncSteps::__isset($name)
+    boolean FutoIn\RI\AsyncSteps::__isset(string $name)
 
-state() access through AsyncSteps interface / check value
+state() access through AsyncSteps interface / check value exists
 
 
 
@@ -1668,13 +1489,13 @@ state() access through AsyncSteps interface / check value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 
 
 ### __unset
 
-    mixed FutoIn\RI\AsyncSteps::__unset($name)
+    mixed FutoIn\RI\AsyncSteps::__unset(string $name)
 
 state() access through AsyncSteps interface / delete value
 
@@ -1685,6 +1506,6 @@ state() access through AsyncSteps interface / delete value
 
 
 #### Arguments
-* $name **mixed**
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
 
 

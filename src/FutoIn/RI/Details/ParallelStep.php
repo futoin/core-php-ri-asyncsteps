@@ -1,11 +1,12 @@
 <?php
 /**
+ * Parallel Step execution details
+ * @internal
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
 
 namespace FutoIn\RI\Details;
-
 
 /**
  * Internal class to organize Parallel step execution

@@ -1,5 +1,7 @@
 <?php
 /**
+ * Helper tool for fine event execution control (useful for testing)
+ *
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
  */
@@ -20,8 +22,10 @@ namespace FutoIn\RI;
 class AsyncToolTest
     extends \FutoIn\RI\Details\AsyncToolImpl
 {
+    /** @internal */
     private static $queue = null;
 
+    /** @internal */
     protected function __construct()
     {
         if ( !self::$queue )
@@ -31,7 +35,8 @@ class AsyncToolTest
     }
     
     /**
-     * @see \FutoIn\RI\Details\AsyncToolImpl::callLater
+     * @see \FutoIn\RI\Details\AsyncToolImpl::callLater()
+     * @internal
      */
     public function callLater( $cb, $delay_ms=0 )
     {
@@ -58,7 +63,8 @@ class AsyncToolTest
     }
     
     /**
-     * @see \FutoIn\RI\Details\AsyncToolImpl::cancelCall
+     * @see \FutoIn\RI\Details\AsyncToolImpl::cancelCall()
+     * @internal
      */
     public function cancelCall( $t )
     {
@@ -96,6 +102,7 @@ class AsyncToolTest
     
     /**
      * Check if any item is scheduled (for unit testing)
+     * @return bool
      */
     public static function hasEvents()
     {
@@ -112,6 +119,7 @@ class AsyncToolTest
 
     /**
      * Get internal item queue (for unit testing)
+     * @return array Refernce to internal queue
      */
     public static function &getEvents()
     {
