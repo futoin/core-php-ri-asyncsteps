@@ -369,73 +369,76 @@ For convenience, error() is extended with optional parameter error_info
 
 ## Simple steps
 
-```javascript
-var async_steps = require('futoin-asyncsteps');
+```php
+use \FutoIn\RI\AsyncSteps;
+use \FutoIn\RI\ScopedSteps;
 
-var root_as = async_steps();
+$root_as = new ScopedSteps();
 
-root_as.add(
-    function( as ){
-        as.success( "MyValue" );
+$root_as->add(
+    function( $as ){
+        $as->success( "MyValue" );
     }
-).add(
-    function( as, arg ){
-        if ( arg === 'MyValue' )
+)->add(
+    function( $as, $arg ){
+        if ( $arg === 'MyValue' )
         {
-            as.add( function( as ){
-                as.error( 'MyError', 'Something bad has happened' );
+            $as->add( function( $as ){
+                $as->error( 'MyError', 'Something bad has happened' );
             });
         }
 
-        as.successStep();
+        $as->successStep();
     },
-    function( as, err )
+    function( $as, $err )
     {
-        if ( err === 'MyError' )
+        if ( $err === 'MyError' )
         {
-            as.success( 'NotSoBad' );
+            $as->success( 'NotSoBad' );
         }
     }
 );
 
-root_as.add(
-    function( as, arg )
+$root_as->add(
+    function( $as, $arg )
     {
-        if ( arg === 'NotSoBad' )
+        if ( $arg === 'NotSoBad' )
         {
-            console.log( 'MyError was ignored: ' + as.state.error_info );
+            echo 'MyError was ignored: ' . $as->state()->error_info . PHP_EOL;
         }
         
-        as.state.p1arg = 'abc';
-        as.state.p2arg = 'xyz';
+        $as->state()->p1arg = 'abc';
+        $as->state()->p2arg = 'xyz';
         
-        var p = as.parallel();
+        $p = $as->parallel();
         
-        p.add( function( as ){
-            console.log( 'Parallel Step 1' );
+        $p->add( function( $as ){
+            echo 'Parallel Step 1' . PHP_EOL;
             
-            as.add( function( as ){
-                console.log( 'Parallel Step 1.1' );
-                as.state.p1 = as.state.p1arg + '1';
-                as.success();
+            $as->add( function( $as ){
+                echo 'Parallel Step 1->1' . PHP_EOL;
+                $as->p1 = $as->p1arg . '1';
+                $as->success();
             } );
         } )
-        .add( function( as ){
-            console.log( 'Parallel Step 2' );
+        ->add( function( $as ){
+            echo 'Parallel Step 2' . PHP_EOL;
             
-            as.add( function( as ){
-                console.log( 'Parallel Step 2.1' );
-                as.state.p2 = as.state.p2arg + '2';
-                as.success();
+            $as->add( function( $as ){
+                echo 'Parallel Step 2->1' . PHP_EOL;
+                $as->p2 = $as->p2arg . '2';
+                $as->success();
             } );
         } );
     }
-).add( function( as ){
-    console.log( 'Parallel 1 result: ' + as.state.p1 );
-    console.log( 'Parallel 2 result: ' + as.state.p2 );
+)->add( function( $as ){
+    echo 'Parallel 1 result: ' . $as->state()->p1 . PHP_EOL;
+    echo 'Parallel 2 result: ' . $as->p2 . PHP_EOL;
 } );
-            
-root_as.execute();
+
+// Note: we use ScopedSteps instead of AsyncSteps in this example
+//$root_as->execute();
+$root_as->run();
 ```
 
 Result:
@@ -443,67 +446,73 @@ Result:
 MyError was ignored: Something bad has happened
 Parallel Step 1
 Parallel Step 2
-Parallel Step 1.1
-Parallel Step 2.1
+Parallel Step 1->1
+Parallel Step 2->1
 Parallel 1 result: abc1
 Parallel 2 result: xyz2
+
 ```
 
 
 ## External event wait
 
-```javascript
-var async_steps = require('futoin-asyncsteps');
+```php
+use \FutoIn\RI\AsyncSteps;
+use \FutoIn\RI\ScopedSteps;
+use \FutoIn\RI\AsyncTool;
 
 
-function dummy_service_read( success, error ){
+function dummy_service_read( $success, $error ){
     // We expect it calles success when data is available
     // and error, if error occurs
     // Returns some request handle
+    return null;
 }
 
-function dummy_service_cancel( reqhandle ){
+function dummy_service_cancel( $reqhandle ){
     // We assume it cancels previously scheduled reqhandle
 }
 
-var root_as = async_steps();
+$root_as = new ScopedSteps();
 
-root_as.add( function( as ){
-    setImmediate( function(){
-        as.success( 'async success()' );
+$root_as->add( function( $as ){
+    AsyncTool::callLater( function() use ( $as ) {
+        $as->success( 'async success()' );
     } );
     
-    as.setTimeout( 10 ); // ms
-} ).add(
-    function( as, arg ){
-        console.log( arg );
+    $as->setTimeout( 10 ); // ms
+} )->add(
+    function( $as, $arg ){
+        echo $arg . PHP_EOL;
         
-        var reqhandle = dummy_service_read(
-            function( data ){
-                as.success( data );
+        $reqhandle = dummy_service_read(
+            function( $data ) use ( $as ) {
+                $as->success( $data );
             },
-            function( err ){
-                if ( err !== 'SomeSpecificCancelCode' )
+            function( $err ) use ( $as ) {
+                if ( $err !== 'SomeSpecificCancelCode' )
                 {
-                    as.error( err );
+                    $as->error( $err );
                 }
             }
         );
         
-        as.setCancel(function(as){
-            dummy_service_cancel( reqhandle );
+        $as->setCancel(function($as) use ( $reqhandle ) {
+            dummy_service_cancel( $reqhandle );
         });
         
         // OPTIONAL. Set timeout of 1s
-        as.setTimeout( 1000 );
+        $as->setTimeout( 1000 );
     },
-    function( as, err )
+    function( $as, $err )
     {
-        console.log( err + ": " + as.state.error_info );
+        echo $err . ": " . $as->error_info . PHP_EOL;
     }
 );
 
-root_as.execute();
+// Note: we use ScopedSteps instead of AsyncSteps in this example
+//$root_as->execute();
+$root_as->run();
 ```
 Result:
 
@@ -514,36 +523,41 @@ Timeout:
 
 ## Model steps (avoid closure creation overhead on repetitive execution)
 
-```javascript
-var async_steps = require('futoin-asyncsteps');
+```php
+use \FutoIn\RI\AsyncSteps;
+use \FutoIn\RI\AsyncToolTest;
 
+// Note, we have no default event engine in PHP
+AsyncToolTest::init();
 
-var model_as = async_steps();
-model_as.state.var = 'Vanilla';
+$model_as = new AsyncSteps();
+$model_as->state()->variable = 'Vanilla';
 
-model_as.add( function(as){
-    console.log('-----');
-    console.log( 'Hi! I am from model_as' );
-    console.log( 'State.var: ' + as.state.var );
-    as.state.var = 'Dirty';
-    as.success();
+$model_as->add( function($as){
+    echo '-----' . PHP_EOL;
+    echo 'Hi! I am from model_as' . PHP_EOL;
+    echo 'State.var: ' . $as->variable . PHP_EOL;
+    $as->variable = 'Dirty';
+    $as->success();
 });
 
-for ( var i = 0; i < 3; ++i )
+for ( $i = 0; $i < 3; ++$i )
 {
-    var root_as = async_steps();
-    root_as.copyFrom( model_as );
-    root_as.add( function(as){
-        as.add(function( as ){
-            console.log('>> The first inner step');
-            as.success();
+    $root_as = new AsyncSteps();
+    $root_as->copyFrom( $model_as );
+    $root_as->add( function( $as ) use ( $model_as ) {
+        $as->add( function( $as ){
+            echo '>> The first inner step' . PHP_EOL;
+            $as->success();
         });
-        as.copyFrom( model_as );
-        as.successStep();
+        $as->copyFrom( $model_as );
+        $as->successStep();
     });
-    root_as.execute();
+    $root_as->execute();
 }
 
+// Process all pending events
+AsyncToolTest::run();
 ```
 Result. Please note the order as only the first step is executed in the loop.
 The rest is executed quasi-parallel by nature of async programming.

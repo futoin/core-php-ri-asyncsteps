@@ -3,3 +3,5 @@ composer.lock
 doc
 docmd
 *.log
+clover.xml
+testcoverage

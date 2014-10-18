@@ -72,7 +72,7 @@ class AsyncSteps
     /**
      * Add \$func step executor to end of current AsyncSteps level queue
      * @param callable $func void execute_callback( AsyncSteps as[, previous_success_args] )
-     * @param calable $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
+     * @param callable $onerror OPTIONAL: void error_callback( AsyncSteps as, error )
      * @return \FutoIn\AsyncSteps reference to $this
      */
     public function add( callable $func, callable $onerror=null )

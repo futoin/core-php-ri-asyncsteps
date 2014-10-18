@@ -31,4 +31,19 @@
             <file>tests/AsyncStepsTest.php</file>
         </testsuite>
     </testsuites>
+    
+    <!-- code coverage -->
+    <filter>
+        <whitelist addUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">./src</directory>
+        </whitelist>
+    </filter>
+    <logging>
+        <log type="coverage-html" target="./testcoverage"/>
+        <log type="coverage-clover" target="./clover.xml"/>
+    </logging>
+    
+    <php>
+        <ini name="date.timezone" value="UTC"/>
+    </php>
 </phpunit>
