@@ -20,12 +20,6 @@ class AsyncSteps
     implements \FutoIn\AsyncSteps
 {
     use Details\AsyncStepsStateAccessorTrait;
-    
-    /**
-     * Implementation-defined state variable name to setup AsyncStepsProtection implementation
-     * @ignore
-     */
-    const STATE_ASP_CLASS = '_aspcls';
 
     /** @internal */
     private $queue;
@@ -56,13 +50,7 @@ class AsyncSteps
 
         if ( $state === null )
         {
-            $state = new \StdClass();
-            $state->error_info = '';
-        }
-        
-        if ( !isset( $state->{self::STATE_ASP_CLASS} ) )
-        {
-            $state->{self::STATE_ASP_CLASS} = __NAMESPACE__.'\\Details\\AsyncStepsProtection';
+            $state = new Details\StateObject();
         }
         
         $this->state = $state;
@@ -240,11 +228,8 @@ class AsyncSteps
      */
     public function error( $name, $error_info=null )
     {
-        if ( $error_info !== null )
-        {
-            $this->state->error_info = $error_info;
-        }
-        
+        $this->state->error_info = $error_info;
+
         if ( !$this->in_execute )
         {
             $this->_handle_error( $name );
@@ -296,6 +281,7 @@ class AsyncSteps
                 catch ( \Exception $e )
                 {
                     $this->in_execute = false;
+                    $this->state()->last_exception = $e;
                     $name = $e->getMessage();
                 }
                 
@@ -391,8 +377,7 @@ class AsyncSteps
         
         $q->rewind(); // Make sure inner add() are insert in front
         
-        $asp_cls = $this->state()->{self::STATE_ASP_CLASS};
-        $asp = new $asp_cls( $this, $aspstack );
+        $asp = new Details\AsyncStepsProtection( $this, $aspstack );
         
         $next_args = &$this->next_args;
         unset( $this->next_args ); //yep
@@ -420,12 +405,7 @@ class AsyncSteps
                 elseif ( !$asp->_limit_event &&
                          !$asp->_oncancel )
                 {
-                    // function must either:
-                    // a) call inner add() to continue execution of sub-steps
-                    // b) call success() or error() to complete execution of current steps
-                    // c) call setTimeout() to delay further execution until result is received
-                    $this->error( \FutoIn\Error::InternalError,
-                            "Step executed with no result, substep, timeout or cancel" );
+                    $this->_handle_success([]);
                 }
             }
             
@@ -434,6 +414,7 @@ class AsyncSteps
         catch ( \Exception $e )
         {
             $this->in_execute = false;
+            $this->state()->last_exception = $e;
             $this->_handle_error( $e->getMessage() );
         }
     }
@@ -482,5 +463,55 @@ class AsyncSteps
     public function _getInnerQueue()
     {
         return $this->queue;
+    }
+    
+    /**
+     * Execute loop until *as.break()* is called
+     * @param callable $func loop body callable( as )
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function loop( callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    /**
+     * For each *map* or *list* element call *func( as, key, value )*
+     * @param array $maplist
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function forEach_( $maplist, callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    /**
+     * Call *func(as, i)* for *count* times
+     * @param integer $count how many times to call the *func*
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function repeat( $count, callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+
+    /**
+     * Break execution of current loop, throws exception
+     * @param string $label unwind loops, until *label* named loop is exited
+     */
+    public function break_( $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+
+    /**
+     * Ccontinue loop execution from the next iteration, throws exception
+     * @param string $label break loops, until *label* named loop is found
+     */
+    public function continue_( $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
 }

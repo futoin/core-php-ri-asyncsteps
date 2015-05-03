@@ -115,16 +115,7 @@ class AsyncStepsProtection
     public function error( $name, $error_info=null )
     {
         $this->_sanityCheck();
-        
-        if ( !$this->_queue )
-        {
-            $this->root->error( $name, $error_info );
-        }
-        else
-        {
-            // Must be properly cancelled, no late completion
-            throw new \FutoIn\Error( \FutoIn\Error::InternalError );
-        }
+        $this->root->error( $name, $error_info );
     }
 
     public function setTimeout( $timeout_ms )
@@ -233,5 +224,221 @@ class AsyncStepsProtection
     public function _getRoot()
     {
         return $this->root;
+    }
+    
+    
+    /**
+     * Execute loop until *as.break()* is called
+     * @param callable $func loop body callable( as )
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function loop( callable $func, $label = null )
+    {
+        $this->_sanityCheck();
+        
+        $loop_state = new \StdClass;
+        $loop_state->model_as = new \FutoIn\RI\AsyncSteps();
+        $loop_state->inner_as = null;
+        $loop_state->outer_as = null;
+        $loop_state->func = $func;
+        $loop_state->label = $label;
+
+        $this->add( function( $outer_as ) use ( $loop_state ) {
+            $loop_state->outer_as = $outer_as;
+            
+            $create_iteration = function() use ( $outer_as, $loop_state ) {
+                $inner_as = new \FutoIn\RI\AsyncSteps( $outer_as->state() );
+                $inner_as->copyFrom( $loop_state->model_as );
+                $loop_state->inner_as = $inner_as;
+                $inner_as->execute();
+            };
+            
+            $loop_state->model_as->add(
+                function( $as ) use ( $loop_state )
+                {
+                    $func = $loop_state->func;
+                    $func( $as );
+                },
+                function( $as, $err ) use ( $loop_state )
+                {
+                    if ( $err === \FutoIn\Error::LoopCont )
+                    {
+                        $label = $loop_state->label;
+                        $term_label = $as->state()->_loop_term_label;
+
+                        if ( $term_label &&
+                             ( $term_label !== $label ) )
+                        {
+                            // Unroll loops continue
+                            \FutoIn\RI\AsyncTool::callLater(
+                                function() use ( $loop_state, $term_label ) {
+                                    try
+                                    {
+                                        $loop_state->outer_as->continue_( $term_label );
+                                    }
+                                    catch ( \Exception $e )
+                                    {}
+                                }
+                            );
+                        }
+                        else
+                        {
+                            $as->success();
+                            return;
+                        }
+                    }
+                    elseif ( $err === \FutoIn\Error::LoopBreak )
+                    {
+                        $label = $loop_state->label;
+                        $term_label = $as->state()->_loop_term_label;
+
+                        if ( $term_label &&
+                             ( $term_label !== $label ) )
+                        {
+                            // Unroll loops and break
+                            \FutoIn\RI\AsyncTool::callLater(
+                                function() use ( $loop_state, $term_label ) {
+                                    try
+                                    {
+                                        $loop_state->outer_as->break_( $term_label );
+                                    }
+                                    catch ( \Exception $e )
+                                    {}
+                                }
+                            );
+                        }
+                        else
+                        {
+                            // Continue linear execution
+                            \FutoIn\RI\AsyncTool::callLater(
+                                function() use ( $loop_state, $term_label ) {
+                                    try
+                                    {
+                                        $loop_state->outer_as->success();
+                                    }
+                                    catch ( \Exception $e )
+                                    {}
+                                }
+                            );
+                        }
+                    }
+                    else
+                    {
+                        \FutoIn\RI\AsyncTool::callLater(
+                            function() use ( $loop_state, $err ) {
+                                try
+                                {
+                                    $loop_state->outer_as->error( $err );
+                                }
+                                catch ( \Exception $e )
+                                {}
+                            }
+                        );
+                    }
+                    
+                    $loop_state->model_as->cancel();
+                    $loop_state->model_as = null;
+                    $loop_state->func = null;
+                }
+            )->add(
+                function( $as ) use( $create_iteration )
+                {
+                    \FutoIn\RI\AsyncTool::callLater( $create_iteration );
+                }
+            );
+            
+            $outer_as->setCancel( function( $as ) use ( $loop_state ) {
+                $loop_state->inner_as->cancel();
+                $loop_state->inner_as = null;
+
+                if ( $loop_state->model_as )
+                {
+                    $loop_state->model_as->cancel();
+                    $loop_state->model_as = null;
+                }
+
+                $loop_state->func = null;
+            } );
+            
+            $create_iteration();
+        } );
+        
+        return $this;
+    }
+    
+    /**
+     * For each *map* or *list* element call *func( as, key, value )*
+     * @param array $maplist
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function forEach_( $maplist, callable $func, $label = null )
+    {
+        $keys = array_keys( $maplist );
+        
+        $this->repeat(
+            count( $keys ),
+            function( $as, $i ) use ( $keys, $maplist, $func )
+            {
+                $k = $keys[ $i ];
+                $func( $as, $k, $maplist[ $k ] );
+            },
+            $label
+        );
+
+        return $this;
+    }
+    
+    /**
+     * Call *func(as, i)* for *count* times
+     * @param integer $count how many times to call the *func*
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function repeat( $count, callable $func, $label = null )
+    {
+        $loop_state = new \StdClass;
+        $loop_state->cnt = $count;
+        $loop_state->func = $func;
+        $loop_state->i = 0;
+        
+        $this->loop(
+            function( $as ) use ( $loop_state )
+            {
+                if ( $loop_state->i < $loop_state->cnt )
+                {
+                    $loop_state->func( $as, $loop_state->i++ );
+                }
+                else
+                {
+                    $as->break_();
+                }
+            },
+            $label
+        );
+        
+        return $this;
+    }
+
+    /**
+     * Break execution of current loop, throws exception
+     * @param string $label unwind loops, until *label* named loop is exited
+     */
+    public function break_( $label = null )
+    {
+        $this->_sanityCheck();
+        $this->state()->_loop_term_label = $label;
+        $this->error( \FutoIn\Error::LoopBreak );
+    }
+
+    /**
+     * Ccontinue loop execution from the next iteration, throws exception
+     * @param string $label break loops, until *label* named loop is found
+     */
+    public function continue_( $label = null )
+    {
+        $this->_sanityCheck();
+        $this->state()->_loop_term_label = $label;
+        $this->error( \FutoIn\Error::LoopCont );
     }
 }

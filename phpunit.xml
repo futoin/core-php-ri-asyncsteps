@@ -30,6 +30,10 @@
         <testsuite name="Core RI AsyncSteps">
             <file>tests/AsyncStepsTest.php</file>
         </testsuite>
+        
+        <testsuite name="Core RI AsyncSteps Loops">
+            <file>tests/AsyncLoopTest.php</file>
+        </testsuite>
     </testsuites>
     
     <!-- code coverage -->

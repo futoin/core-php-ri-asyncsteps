@@ -4,7 +4,7 @@
 Reference implementation of:
  
     FTN12: FutoIn Async API
-    Version: 1.3
+    Version: 1.6
     
 Spec: [FTN12: FutoIn Async API v1.x](http://specs.futoin.org/final/preview/ftn12_async_api-1.html)
 
@@ -41,7 +41,7 @@ $ npm install futoin-asyncsteps --save
 and/or package.json:
 ```
 "dependencies" : {
-    "futoin-asyncsteps" : ">=0.99 <2.00"
+    "futoin-asyncsteps" : "~1"
 }
 ```
 

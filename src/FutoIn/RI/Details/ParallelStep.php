@@ -188,6 +188,55 @@ class ParallelStep
     
     public function __clone()
     {}
+   
+    /**
+     * Execute loop until *as.break()* is called
+     * @param callable $func loop body callable( as )
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function loop( callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    /**
+     * For each *map* or *list* element call *func( as, key, value )*
+     * @param array $maplist
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function forEach_( $maplist, callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+    
+    /**
+     * Call *func(as, i)* for *count* times
+     * @param integer $count how many times to call the *func*
+     * @param callable $func loop body *func( as, key, value )*
+     * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
+     */
+    public function repeat( $count, callable $func, $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
 
+    /**
+     * Break execution of current loop, throws exception
+     * @param string $label unwind loops, until *label* named loop is exited
+     */
+    public function break_( $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
+
+    /**
+     * Ccontinue loop execution from the next iteration, throws exception
+     * @param string $label break loops, until *label* named loop is found
+     */
+    public function continue_( $label = null )
+    {
+        throw new \FutoIn\Error( \FutoIn\Error::InternalError );
+    }
 }
 

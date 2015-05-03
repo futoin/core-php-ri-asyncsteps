@@ -1,6 +1,5 @@
 <?php
 /**
- * @package FutoIn\Core\PHP\RI\AsyncSteps
  * @copyright 2014 FutoIn Project (http://futoin.org)
  * @author Andrey Galkin
   */
@@ -65,9 +64,9 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         
         $as->execute();
         
-        $this->assertTrue(
+        $this->assertFalse(
             $as->state()->error_called,
-            "Error handler was not called"
+            "Error handler was called"
         );
         
         $this->assertNoEvents();
@@ -1059,44 +1058,11 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $this->assertNoEvents();
     }
 
-    public function testDerivedClasses()
-    {
-        $as = $this->as = new ASTestImpl();
-        
-        $as->as_test_used = false;
-        $as->asp_test_used = false;
-        
-        $as->add(
-            function($as){
-                $this->assertFalse( $as->as_test_used, "ASTestImpl is called" );
-                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
-                $as->asp_test_used = false;
-                
-                $p = $as->parallel();
-                $p->add(
-                    function( $as )
-                    {
-                        $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
-                        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
-                    }
-                );
-            }
-        );
-        
-        $as->execute();
-        AsyncToolTest::nextEvent();
-        AsyncToolTest::nextEvent();
-        $this->assertNoEvents();
-        $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
-        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
-    }
-    
     public function testClone()
     {
         $ras = new ASTestImpl();
         
         $ras->as_test_used = false;
-        $ras->asp_test_used = false;
         
         $pas = $this->as;
         $pas->inner_copied = true;
@@ -1105,7 +1071,6 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
             function( $as )
             {
                 $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
-                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
             }
         );
 
@@ -1113,8 +1078,6 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $ras->add(
             function($as) use ($pas){
                 $this->assertFalse( $as->as_test_used, "ASTestImpl is called" );
-                $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
-                $as->asp_test_used = false;
                 
                 $this->assertFalse( isset( $as->inner_copied ), "inner_copied is set" );
                 
@@ -1129,12 +1092,11 @@ class AsyncStepsTest extends PHPUnit_Framework_TestCase
         $as->execute();
         AsyncToolTest::nextEvent();
         AsyncToolTest::nextEvent();
+        AsyncToolTest::nextEvent();
         $this->assertNoEvents();
         
         $this->assertTrue( $as->as_test_used, "ASTestImpl not called" );
-        $this->assertTrue( $as->asp_test_used, "AsyncStepsProtection not called" );
         $this->assertFalse( $ras->as_test_used, "reference model state is affected as_test_used" );
-        $this->assertFalse( $ras->asp_test_used, "reference model state is affected asp_test_used" );
     }
     
     public function testScopedSteps()
@@ -1556,21 +1518,6 @@ class ASTestImpl extends \FutoIn\RI\AsyncSteps
     public function __construct( $state=null )
     {
         parent::__construct( $state );
-        $this->state()->{self::STATE_ASP_CLASS} = __NAMESPACE__.'\\ASPTestImpl';
         $this->state()->as_test_used = true;
     }
-}
-
-/**
- * Internal class for testing
- * @ignore
- */
-class ASPTestImpl extends \FutoIn\RI\Details\AsyncStepsProtection
-{
-    public function __construct( $parent, &$adapter_stack )
-    {
-        parent::__construct( $parent, $adapter_stack );
-        $this->state()->asp_test_used = true;
-    }
-
 }
