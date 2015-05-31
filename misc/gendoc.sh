@@ -1,7 +1,14 @@
 #!/bin/bash
 
 mkdir -p doc
-php -d date.timezone=UTC vendor/bin/phpdoc -t doc/ -d src/ --title "FutoIn AsyncSteps RI" --template xml --force
+php -d date.timezone=UTC \
+    vendor/bin/phpdoc \
+    -t doc/ \
+    -d src/ \
+    --ignore src/FutoIn/RI/Details \
+    --title "FutoIn AsyncSteps RI" \
+    --template xml \
+    --force
 
 mkdir -p docmd
 vendor/bin/phpdocmd doc/structure.xml docmd

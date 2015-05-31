@@ -4,7 +4,7 @@
 Reference implementation of:
  
     FTN12: FutoIn Async API
-    Version: 1.3
+    Version: 1.7
     
 Spec: [FTN12: FutoIn Async API v1.x](http://specs.futoin.org/final/preview/ftn12_async_api-1.html)
 
@@ -17,8 +17,9 @@ Adds classical linear program flow structure to async programming
 supporting exceptions. error handlers, timeouts, unlimited number of sub-steps,
 execution parallelism and job state/context variables.
 
-Current version is targeted at Node.js, but should be easily used in
-web browser environment as well (not yet tested).
+There is little benefit of using this tool in classical PHP aproach of one-request-one-execution approach.
+However, it is base for FutoIn Invoker and Executor implementation, which target at daemon-like
+execution pattern.
 
 It should be possible to use any other async framework from AsyncSteps by using
 setCancel() and/or setTimeout() methods which allow step completion without success() or
@@ -36,13 +37,13 @@ and state variables using AsyncSteps#copyFrom() to a newly created object.
 
 Command line:
 ```sh
-$ npm install futoin-asyncsteps --save
+$ composer require 'futoin/core-php-ri-asyncsteps'
 ```
-and/or package.json:
+and/or composer.json:
 ```
-"dependencies" : {
-    "futoin-asyncsteps" : ">=0.99 <2.00"
-}
+    "require" : {
+        "futoin/core-php-ri-asyncsteps" : "^1.1",
+    }
 ```
 
 # Concept
@@ -318,52 +319,120 @@ Example:
 
 However, this approach only make sense for deep performance optimizations.
 
-## 1.6. "Success Step" and Throw
+## 1.6. Implicit as.success()
 
-During development, when step flow is not known at coding time, but dynamically resolved
-based on configuration, internal state, etc., it is common to see the following logic:
-
-    as.add(func( as ){
-        someHelperA( as ); // adds sub-step
-        someHelperB( as ); // does nothing
-        
-        // Not effective
-        as.add(func( as ){
-            as->success();
-        })
-    })
-    
-The idea is that is it not known in advance if someHelper*() adds sub-steps or not. However, we must ensure
-that a) only one success() call is yield b) there are no sub-steps. 
-
-To make this elegant and efficient, a "success step" concept can be introduced:
+If there are no sub-steps added, no timeout set and no cancel handler set then
+implicit as.success() call is assumed to simplify code and increase efficiency.
 
     as.add(func( as ){
-        someHelperA( as ); // adds sub-step
-        someHelperB( as ); // does nothing
-        
-        // Runtime optimized
-        as.successStep();
+        doSomeStuff( as );
     })
-    
-As a counterpart for error handling, we must ensure that execution has stopped after error
-is triggered in someHelper*() with no enclosing sub-step. The only safe way is to throw exception
-what is now done in as.error()
 
-### 1.6.1. Safety Rules of "Success" and "Error"
+## 1.7. Error Info and Last Exception
 
-1. as.success() should be called only in top-most function of the
-    step (the one passed to as.add() directly)
-1. if top-most functions calls abstract helpers then it should call as.successStep()
-    for safe and efficient successful termination
+Pre-defined state variables:
 
-
-## 1.7. Error Info
+* **error_info** - value of the second parameter passed to the last *as.error()* call
+* **last_exception** - the last exception caught, if feasible
 
 Error code is not always descriptive enough, especially, if it can be generated in multiple ways.
 As a convention special "error_info" state field should hold descriptive information of the last error.
+Therefore, *as.error()* is extended with optional parameter error_info.
 
-For convenience, error() is extended with optional parameter error_info
+"last_exception" state variables may hold the last exception object caught, if feasible
+to implement. It should be populated with FutoIn errors as well.
+
+
+## 1.8. Async Loops
+
+Almost always, async program flow is not linear. Sometimes, loops are required.
+
+Basic principals of async loops:
+
+        as.loop( func( as ){
+            call_some_library( as );
+            as.add( func( as, result ){
+                if ( !result )
+                {
+                    // exit loop
+                    as.break();
+                }
+            } );
+        } )
+        
+Inner loops and identifiers:
+
+        // start loop
+        as.loop( 
+            func( as ){
+                as.loop( func( as ){
+                    call_some_library( as );
+                    as.add( func( as, result ){
+                        if ( !result )
+                        {
+                            // exit loop
+                            as.continue( "OUTER" );
+                        }
+
+                        as.success( result );
+                    } );
+                } );
+                
+                as.add( func( as, result ){
+                    // use it somehow
+                    as.success();
+                } );
+            },
+            "OUTER"
+        )
+        
+Loop n times.
+
+        as.repeat( 3, func( as, i ){
+            print( 'Iteration: ' + i )
+        } )
+        
+Traverse through list or map:
+
+        as.forEach(
+            [ 'apple', 'banana' ],
+            func( as, k, v ){
+                print( k + " = " + v )
+            }
+        )
+        
+### 1.8.1. Termination
+
+Normal loop termination is performed either by loop condition (e.g. as.forEach(), as.repeat())
+or by as.break() call. Normal termination is seen as as.success() call.
+
+Abnormal termination is possible through as.error(), including timeout, or external as.cancel().
+Abnormal termination is seen as as.error() call.
+
+
+## 1.9. The Safety Rules of libraries with AsyncSteps interface
+
+1. as.success() should be called only in top-most function of the
+    step (the one passed to as.add() directly)
+1. setCancel() and/or setTimeout() must be called only in top most function
+    as repeated call overrides in scope of step
+
+## 1.10. Reserved keyword name clash
+
+If any of API identifiers clashes with reserved word or has illegal symbols then
+implementation-defined name mangling is allowed, but with the following guidelines
+in priority.
+
+Pre-defined alternative method names, if the default matches language-specific reserved keywords:
+
+* *loop* -> makeLoop
+* *forEach* -> loopForEach
+* *repeat* -> repeatLoop
+* *break* -> breakLoop
+* *continue* -> continueLoop
+* Otherwise, - try adding underscore to the end of the
+    identifier (e.g. do -> do_)
+
 
 # Examples
 

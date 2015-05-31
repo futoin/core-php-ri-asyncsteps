@@ -4,7 +4,7 @@
 Reference implementation of:
  
     FTN12: FutoIn Async API
-    Version: 1.6
+    Version: 1.7
     
 Spec: [FTN12: FutoIn Async API v1.x](http://specs.futoin.org/final/preview/ftn12_async_api-1.html)
 
@@ -17,8 +17,9 @@ Adds classical linear program flow structure to async programming
 supporting exceptions. error handlers, timeouts, unlimited number of sub-steps,
 execution parallelism and job state/context variables.
 
-Current version is targeted at Node.js, but should be easily used in
-web browser environment as well (not yet tested).
+There is little benefit of using this tool in classical PHP aproach of one-request-one-execution approach.
+However, it is base for FutoIn Invoker and Executor implementation, which target at daemon-like
+execution pattern.
 
 It should be possible to use any other async framework from AsyncSteps by using
 setCancel() and/or setTimeout() methods which allow step completion without success() or
@@ -36,13 +37,13 @@ and state variables using AsyncSteps#copyFrom() to a newly created object.
 
 Command line:
 ```sh
-$ npm install futoin-asyncsteps --save
+$ composer require 'futoin/core-php-ri-asyncsteps'
 ```
-and/or package.json:
+and/or composer.json:
 ```
-"dependencies" : {
-    "futoin-asyncsteps" : "~1"
-}
+    "require" : {
+        "futoin/core-php-ri-asyncsteps" : "^1.1",
+    }
 ```
 
 # Concept
@@ -318,52 +319,120 @@ Example:
 
 However, this approach only make sense for deep performance optimizations.
 
-## 1.6. "Success Step" and Throw
+## 1.6. Implicit as.success()
 
-During development, when step flow is not known at coding time, but dynamically resolved
-based on configuration, internal state, etc., it is common to see the following logic:
-
-    as.add(func( as ){
-        someHelperA( as ); // adds sub-step
-        someHelperB( as ); // does nothing
-        
-        // Not effective
-        as.add(func( as ){
-            as->success();
-        })
-    })
-    
-The idea is that is it not known in advance if someHelper*() adds sub-steps or not. However, we must ensure
-that a) only one success() call is yield b) there are no sub-steps. 
-
-To make this elegant and efficient, a "success step" concept can be introduced:
+If there are no sub-steps added, no timeout set and no cancel handler set then
+implicit as.success() call is assumed to simplify code and increase efficiency.
 
     as.add(func( as ){
-        someHelperA( as ); // adds sub-step
-        someHelperB( as ); // does nothing
-        
-        // Runtime optimized
-        as.successStep();
+        doSomeStuff( as );
     })
-    
-As a counterpart for error handling, we must ensure that execution has stopped after error
-is triggered in someHelper*() with no enclosing sub-step. The only safe way is to throw exception
-what is now done in as.error()
 
-### 1.6.1. Safety Rules of "Success" and "Error"
+## 1.7. Error Info and Last Exception
 
-1. as.success() should be called only in top-most function of the
-    step (the one passed to as.add() directly)
-1. if top-most functions calls abstract helpers then it should call as.successStep()
-    for safe and efficient successful termination
+Pre-defined state variables:
 
-
-## 1.7. Error Info
+* **error_info** - value of the second parameter passed to the last *as.error()* call
+* **last_exception** - the last exception caught, if feasible
 
 Error code is not always descriptive enough, especially, if it can be generated in multiple ways.
 As a convention special "error_info" state field should hold descriptive information of the last error.
+Therefore, *as.error()* is extended with optional parameter error_info.
 
-For convenience, error() is extended with optional parameter error_info
+"last_exception" state variables may hold the last exception object caught, if feasible
+to implement. It should be populated with FutoIn errors as well.
+
+
+## 1.8. Async Loops
+
+Almost always, async program flow is not linear. Sometimes, loops are required.
+
+Basic principals of async loops:
+
+        as.loop( func( as ){
+            call_some_library( as );
+            as.add( func( as, result ){
+                if ( !result )
+                {
+                    // exit loop
+                    as.break();
+                }
+            } );
+        } )
+        
+Inner loops and identifiers:
+
+        // start loop
+        as.loop( 
+            func( as ){
+                as.loop( func( as ){
+                    call_some_library( as );
+                    as.add( func( as, result ){
+                        if ( !result )
+                        {
+                            // exit loop
+                            as.continue( "OUTER" );
+                        }
+
+                        as.success( result );
+                    } );
+                } );
+                
+                as.add( func( as, result ){
+                    // use it somehow
+                    as.success();
+                } );
+            },
+            "OUTER"
+        )
+        
+Loop n times.
+
+        as.repeat( 3, func( as, i ){
+            print( 'Iteration: ' + i )
+        } )
+        
+Traverse through list or map:
+
+        as.forEach(
+            [ 'apple', 'banana' ],
+            func( as, k, v ){
+                print( k + " = " + v )
+            }
+        )
+        
+### 1.8.1. Termination
+
+Normal loop termination is performed either by loop condition (e.g. as.forEach(), as.repeat())
+or by as.break() call. Normal termination is seen as as.success() call.
+
+Abnormal termination is possible through as.error(), including timeout, or external as.cancel().
+Abnormal termination is seen as as.error() call.
+
+
+## 1.9. The Safety Rules of libraries with AsyncSteps interface
+
+1. as.success() should be called only in top-most function of the
+    step (the one passed to as.add() directly)
+1. setCancel() and/or setTimeout() must be called only in top most function
+    as repeated call overrides in scope of step
+
+## 1.10. Reserved keyword name clash
+
+If any of API identifiers clashes with reserved word or has illegal symbols then
+implementation-defined name mangling is allowed, but with the following guidelines
+in priority.
+
+Pre-defined alternative method names, if the default matches language-specific reserved keywords:
+
+* *loop* -> makeLoop
+* *forEach* -> loopForEach
+* *repeat* -> repeatLoop
+* *break* -> breakLoop
+* *continue* -> continueLoop
+* Otherwise, - try adding underscore to the end of the
+    identifier (e.g. do -> do_)
+
 
 # Examples
 
@@ -597,12 +666,15 @@ API Index
 
 * FutoIn
     * FutoIn\RI
+        * FutoIn\RI\Details
+            * [AsyncStepsProtection](#FutoIn-RI-Details-AsyncStepsProtection.md)
+            * [StateObject](#FutoIn-RI-Details-StateObject.md)
+            * [ParallelStep](#FutoIn-RI-Details-ParallelStep.md)
+            * [AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
         * [AsyncSteps](#FutoIn-RI-AsyncSteps.md)
         * [ScopedSteps](#FutoIn-RI-ScopedSteps.md)
         * [AsyncTool](#FutoIn-RI-AsyncTool.md)
         * [AsyncToolTest](#FutoIn-RI-AsyncToolTest.md)
-        * FutoIn\RI\Details
-            * [AsyncToolImpl](#FutoIn-RI-Details-AsyncToolImpl.md)
 
 
 <a name="FutoIn-RI-AsyncSteps.md"></a>
@@ -818,6 +890,91 @@ It can be called only on root instance of AsyncSteps
 
 * Visibility: **public**
 
+
+
+
+### loop
+
+    mixed FutoIn\RI\AsyncSteps::loop(callable $func, string $label)
+
+Execute loop until *as.break()* is called
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $func **callable** - &lt;p&gt;loop body callable( as )&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### loopForEach
+
+    mixed FutoIn\RI\AsyncSteps::loopForEach(array $maplist, callable $func, string $label)
+
+For each *map* or *list* element call *func( as, key, value )*
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $maplist **array**
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### repeat
+
+    mixed FutoIn\RI\AsyncSteps::repeat(integer $count, callable $func, string $label)
+
+Call *func(as, i)* for *count* times
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $count **integer** - &lt;p&gt;how many times to call the &lt;em&gt;func&lt;/em&gt;&lt;/p&gt;
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### breakLoop
+
+    mixed FutoIn\RI\AsyncSteps::breakLoop(string $label)
+
+Break execution of current loop, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;unwind loops, until &lt;em&gt;label&lt;/em&gt; named loop is exited&lt;/p&gt;
+
+
+
+### continueLoop
+
+    mixed FutoIn\RI\AsyncSteps::continueLoop(string $label)
+
+Ccontinue loop execution from the next iteration, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;break loops, until &lt;em&gt;label&lt;/em&gt; named loop is found&lt;/p&gt;
 
 
 
@@ -1122,6 +1279,478 @@ Cancel previously scheduled $ref item
 
 
 
+<a name="FutoIn-RI-Details-AsyncStepsProtection.md"></a>
+FutoIn\RI\Details\AsyncStepsProtection
+===============
+
+Internal class to organize AsyncSteps levels during execution
+
+
+
+
+* Class name: AsyncStepsProtection
+* Namespace: FutoIn\RI\Details
+* This class implements: FutoIn\AsyncSteps
+
+
+
+
+Properties
+----------
+
+
+### $root
+
+    private mixed $root
+
+
+
+
+
+* Visibility: **private**
+
+
+### $adapter_stack
+
+    private mixed $adapter_stack
+
+
+
+
+
+* Visibility: **private**
+
+
+### $_onerror
+
+    public mixed $_onerror
+
+
+
+
+
+* Visibility: **public**
+
+
+### $_oncancel
+
+    public mixed $_oncancel
+
+
+
+
+
+* Visibility: **public**
+
+
+### $_queue
+
+    public mixed $_queue = null
+
+
+
+
+
+* Visibility: **public**
+
+
+### $_limit_event
+
+    public mixed $_limit_event = null
+
+
+
+
+
+* Visibility: **public**
+
+
+Methods
+-------
+
+
+### __construct
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__construct($root, $adapter_stack)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $root **mixed**
+* $adapter_stack **mixed**
+
+
+
+### _cleanup
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::_cleanup()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### _sanityCheck
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::_sanityCheck()
+
+
+
+
+
+* Visibility: **private**
+
+
+
+
+### add
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::add(callable $func, callable $onerror)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $func **callable**
+* $onerror **callable**
+
+
+
+### parallel
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::parallel(callable $onerror)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $onerror **callable**
+
+
+
+### state
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::state()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### success
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::success()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### successStep
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::successStep()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### error
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::error($name, $error_info)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **mixed**
+* $error_info **mixed**
+
+
+
+### setTimeout
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::setTimeout($timeout_ms)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $timeout_ms **mixed**
+
+
+
+### __invoke
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__invoke()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### setCancel
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::setCancel(callable $oncancel)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $oncancel **callable**
+
+
+
+### execute
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::execute()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### cancel
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::cancel()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### copyFrom
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::copyFrom(\FutoIn\AsyncSteps $other)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $other **FutoIn\AsyncSteps**
+
+
+
+### __clone
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__clone()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### loop
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::loop(callable $func, string $label)
+
+Execute loop until *as.break()* is called
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $func **callable** - &lt;p&gt;loop body callable( as )&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### loopForEach
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::loopForEach(array $maplist, callable $func, string $label)
+
+For each *map* or *list* element call *func( as, key, value )*
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $maplist **array**
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### repeat
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::repeat(integer $count, callable $func, string $label)
+
+Call *func(as, i)* for *count* times
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $count **integer** - &lt;p&gt;how many times to call the &lt;em&gt;func&lt;/em&gt;&lt;/p&gt;
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### breakLoop
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::breakLoop(string $label)
+
+Break execution of current loop, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;unwind loops, until &lt;em&gt;label&lt;/em&gt; named loop is exited&lt;/p&gt;
+
+
+
+### continueLoop
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::continueLoop(string $label)
+
+Ccontinue loop execution from the next iteration, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;break loops, until &lt;em&gt;label&lt;/em&gt; named loop is found&lt;/p&gt;
+
+
+
+### __set
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__set(string $name, mixed $value)
+
+state() access through AsyncSteps interface / set value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+* $value **mixed** - &lt;p&gt;state variable value&lt;/p&gt;
+
+
+
+### __get
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__get(string $name)
+
+state() access through AsyncSteps interface / get value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
+### __isset
+
+    boolean FutoIn\RI\Details\AsyncStepsProtection::__isset(string $name)
+
+state() access through AsyncSteps interface / check value exists
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
+### __unset
+
+    mixed FutoIn\RI\Details\AsyncStepsProtection::__unset(string $name)
+
+state() access through AsyncSteps interface / delete value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
 <a name="FutoIn-RI-Details-AsyncToolImpl.md"></a>
 FutoIn\RI\Details\AsyncToolImpl
 ===============
@@ -1204,6 +1833,485 @@ Cancel previously scheduled $ref item
 
 #### Arguments
 * $ref **mixed** - &lt;p&gt;Any value returned from callLater()&lt;/p&gt;
+
+
+
+<a name="FutoIn-RI-Details-ParallelStep.md"></a>
+FutoIn\RI\Details\ParallelStep
+===============
+
+Internal class to organize Parallel step execution
+
+
+
+
+* Class name: ParallelStep
+* Namespace: FutoIn\RI\Details
+* This class implements: FutoIn\AsyncSteps
+
+
+
+
+Properties
+----------
+
+
+### $root
+
+    private mixed $root
+
+
+
+
+
+* Visibility: **private**
+
+
+### $as
+
+    private mixed $as
+
+
+
+
+
+* Visibility: **private**
+
+
+### $parallel_steps
+
+    private mixed $parallel_steps
+
+
+
+
+
+* Visibility: **private**
+
+
+### $complete_count
+
+    private mixed $complete_count
+
+
+
+
+
+* Visibility: **private**
+
+
+Methods
+-------
+
+
+### __construct
+
+    mixed FutoIn\RI\Details\ParallelStep::__construct($root, $async_iface)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $root **mixed**
+* $async_iface **mixed**
+
+
+
+### _cleanup
+
+    mixed FutoIn\RI\Details\ParallelStep::_cleanup()
+
+
+
+
+
+* Visibility: **private**
+
+
+
+
+### add
+
+    mixed FutoIn\RI\Details\ParallelStep::add(callable $func, callable $onerror)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $func **callable**
+* $onerror **callable**
+
+
+
+### parallel
+
+    mixed FutoIn\RI\Details\ParallelStep::parallel(callable $onerror)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $onerror **callable**
+
+
+
+### state
+
+    mixed FutoIn\RI\Details\ParallelStep::state()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### success
+
+    mixed FutoIn\RI\Details\ParallelStep::success()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### successStep
+
+    mixed FutoIn\RI\Details\ParallelStep::successStep()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### error
+
+    mixed FutoIn\RI\Details\ParallelStep::error($name, $errorinfo)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **mixed**
+* $errorinfo **mixed**
+
+
+
+### __invoke
+
+    mixed FutoIn\RI\Details\ParallelStep::__invoke()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### setTimeout
+
+    mixed FutoIn\RI\Details\ParallelStep::setTimeout($timeout_ms)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $timeout_ms **mixed**
+
+
+
+### setCancel
+
+    mixed FutoIn\RI\Details\ParallelStep::setCancel(callable $oncancel)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $oncancel **callable**
+
+
+
+### execute
+
+    mixed FutoIn\RI\Details\ParallelStep::execute()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### copyFrom
+
+    mixed FutoIn\RI\Details\ParallelStep::copyFrom(\FutoIn\AsyncSteps $other)
+
+
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $other **FutoIn\AsyncSteps**
+
+
+
+### __clone
+
+    mixed FutoIn\RI\Details\ParallelStep::__clone()
+
+
+
+
+
+* Visibility: **public**
+
+
+
+
+### loop
+
+    mixed FutoIn\RI\Details\ParallelStep::loop(callable $func, string $label)
+
+Execute loop until *as.break()* is called
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $func **callable** - &lt;p&gt;loop body callable( as )&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### loopForEach
+
+    mixed FutoIn\RI\Details\ParallelStep::loopForEach(array $maplist, callable $func, string $label)
+
+For each *map* or *list* element call *func( as, key, value )*
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $maplist **array**
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### repeat
+
+    mixed FutoIn\RI\Details\ParallelStep::repeat(integer $count, callable $func, string $label)
+
+Call *func(as, i)* for *count* times
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $count **integer** - &lt;p&gt;how many times to call the &lt;em&gt;func&lt;/em&gt;&lt;/p&gt;
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### breakLoop
+
+    mixed FutoIn\RI\Details\ParallelStep::breakLoop(string $label)
+
+Break execution of current loop, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;unwind loops, until &lt;em&gt;label&lt;/em&gt; named loop is exited&lt;/p&gt;
+
+
+
+### continueLoop
+
+    mixed FutoIn\RI\Details\ParallelStep::continueLoop(string $label)
+
+Ccontinue loop execution from the next iteration, throws exception
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;break loops, until &lt;em&gt;label&lt;/em&gt; named loop is found&lt;/p&gt;
+
+
+
+### __set
+
+    mixed FutoIn\RI\Details\ParallelStep::__set(string $name, mixed $value)
+
+state() access through AsyncSteps interface / set value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+* $value **mixed** - &lt;p&gt;state variable value&lt;/p&gt;
+
+
+
+### __get
+
+    mixed FutoIn\RI\Details\ParallelStep::__get(string $name)
+
+state() access through AsyncSteps interface / get value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
+### __isset
+
+    boolean FutoIn\RI\Details\ParallelStep::__isset(string $name)
+
+state() access through AsyncSteps interface / check value exists
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
+### __unset
+
+    mixed FutoIn\RI\Details\ParallelStep::__unset(string $name)
+
+state() access through AsyncSteps interface / delete value
+
+
+
+* Visibility: **public**
+
+
+#### Arguments
+* $name **string** - &lt;p&gt;state variable name&lt;/p&gt;
+
+
+
+<a name="FutoIn-RI-Details-StateObject.md"></a>
+FutoIn\RI\Details\StateObject
+===============
+
+Internal class to organize state object.
+
+
+
+
+* Class name: StateObject
+* Namespace: FutoIn\RI\Details
+
+
+
+
+
+Properties
+----------
+
+
+### $error_info
+
+    public mixed $error_info = null
+
+
+
+
+
+* Visibility: **public**
+
+
+### $last_exception
+
+    public mixed $last_exception = null
+
+
+
+
+
+* Visibility: **public**
+
+
+### $_loop_term_label
+
+    public mixed $_loop_term_label = null
+
+
+
+
+
+* Visibility: **public**
+
 
 
 
@@ -1452,6 +2560,96 @@ It can be called only on root instance of AsyncSteps
 * Visibility: **public**
 * This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
 
+
+
+
+### loop
+
+    mixed FutoIn\RI\AsyncSteps::loop(callable $func, string $label)
+
+Execute loop until *as.break()* is called
+
+
+
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+#### Arguments
+* $func **callable** - &lt;p&gt;loop body callable( as )&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### loopForEach
+
+    mixed FutoIn\RI\AsyncSteps::loopForEach(array $maplist, callable $func, string $label)
+
+For each *map* or *list* element call *func( as, key, value )*
+
+
+
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+#### Arguments
+* $maplist **array**
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### repeat
+
+    mixed FutoIn\RI\AsyncSteps::repeat(integer $count, callable $func, string $label)
+
+Call *func(as, i)* for *count* times
+
+
+
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+#### Arguments
+* $count **integer** - &lt;p&gt;how many times to call the &lt;em&gt;func&lt;/em&gt;&lt;/p&gt;
+* $func **callable** - &lt;p&gt;loop body &lt;em&gt;func( as, key, value )&lt;/em&gt;&lt;/p&gt;
+* $label **string** - &lt;p&gt;optional label to use for &lt;em&gt;as.break()&lt;/em&gt; and &lt;em&gt;as.continue()&lt;/em&gt; in inner loops&lt;/p&gt;
+
+
+
+### breakLoop
+
+    mixed FutoIn\RI\AsyncSteps::breakLoop(string $label)
+
+Break execution of current loop, throws exception
+
+
+
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;unwind loops, until &lt;em&gt;label&lt;/em&gt; named loop is exited&lt;/p&gt;
+
+
+
+### continueLoop
+
+    mixed FutoIn\RI\AsyncSteps::continueLoop(string $label)
+
+Ccontinue loop execution from the next iteration, throws exception
+
+
+
+* Visibility: **public**
+* This method is defined by [FutoIn\RI\AsyncSteps](#FutoIn-RI-AsyncSteps.md)
+
+
+#### Arguments
+* $label **string** - &lt;p&gt;break loops, until &lt;em&gt;label&lt;/em&gt; named loop is found&lt;/p&gt;
 
 
 
