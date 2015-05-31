@@ -374,7 +374,12 @@ class AsyncStepsProtection
      */
     public function loopForEach( $maplist, callable $func, $label = null )
     {
-        $keys = array_keys( $maplist );
+        if ( is_object( $maplist ) )
+        {
+            $maplist = get_object_vars( $maplist );
+        }
+    
+        $keys = array_keys( $maplist ); // reset() + each() does not work accros in different funcs
         
         $this->repeat(
             count( $keys ),
@@ -407,7 +412,8 @@ class AsyncStepsProtection
             {
                 if ( $loop_state->i < $loop_state->cnt )
                 {
-                    $loop_state->func( $as, $loop_state->i++ );
+                    $func = $loop_state->func;
+                    $func( $as, $loop_state->i++ );
                 }
                 else
                 {
