@@ -205,7 +205,7 @@ class ParallelStep
      * @param callable $func loop body *func( as, key, value )*
      * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
      */
-    public function forEach_( $maplist, callable $func, $label = null )
+    public function loopForEach( $maplist, callable $func, $label = null )
     {
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
@@ -225,7 +225,7 @@ class ParallelStep
      * Break execution of current loop, throws exception
      * @param string $label unwind loops, until *label* named loop is exited
      */
-    public function break_( $label = null )
+    public function breakLoop( $label = null )
     {
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }
@@ -234,7 +234,7 @@ class ParallelStep
      * Ccontinue loop execution from the next iteration, throws exception
      * @param string $label break loops, until *label* named loop is found
      */
-    public function continue_( $label = null )
+    public function continueLoop( $label = null )
     {
         throw new \FutoIn\Error( \FutoIn\Error::InternalError );
     }

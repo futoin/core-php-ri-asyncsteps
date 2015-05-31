@@ -274,7 +274,7 @@ class AsyncStepsProtection
                                 function() use ( $loop_state, $term_label ) {
                                     try
                                     {
-                                        $loop_state->outer_as->continue_( $term_label );
+                                        $loop_state->outer_as->continueLoop( $term_label );
                                     }
                                     catch ( \Exception $e )
                                     {}
@@ -300,7 +300,7 @@ class AsyncStepsProtection
                                 function() use ( $loop_state, $term_label ) {
                                     try
                                     {
-                                        $loop_state->outer_as->break_( $term_label );
+                                        $loop_state->outer_as->breakLoop( $term_label );
                                     }
                                     catch ( \Exception $e )
                                     {}
@@ -372,7 +372,7 @@ class AsyncStepsProtection
      * @param callable $func loop body *func( as, key, value )*
      * @param string $label optional label to use for *as.break()* and *as.continue()* in inner loops
      */
-    public function forEach_( $maplist, callable $func, $label = null )
+    public function loopForEach( $maplist, callable $func, $label = null )
     {
         $keys = array_keys( $maplist );
         
@@ -411,7 +411,7 @@ class AsyncStepsProtection
                 }
                 else
                 {
-                    $as->break_();
+                    $as->breakLoop();
                 }
             },
             $label
@@ -424,7 +424,7 @@ class AsyncStepsProtection
      * Break execution of current loop, throws exception
      * @param string $label unwind loops, until *label* named loop is exited
      */
-    public function break_( $label = null )
+    public function breakLoop( $label = null )
     {
         $this->_sanityCheck();
         $this->state()->_loop_term_label = $label;
@@ -435,7 +435,7 @@ class AsyncStepsProtection
      * Ccontinue loop execution from the next iteration, throws exception
      * @param string $label break loops, until *label* named loop is found
      */
-    public function continue_( $label = null )
+    public function continueLoop( $label = null )
     {
         $this->_sanityCheck();
         $this->state()->_loop_term_label = $label;

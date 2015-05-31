@@ -70,12 +70,12 @@ class AsyncLoopTest extends PHPUnit_Framework_TestCase
                             
                             if ( $as->i > 2 )
                             {
-                                $as->break_();
+                                $as->breakLoop();
                             }
                             elseif ( $as->i === 1 )
                             {
                                 $as->i++;
-                                $as->continue_();
+                                $as->continueLoop();
                             }
                             
                             $as->i++;
@@ -87,16 +87,16 @@ class AsyncLoopTest extends PHPUnit_Framework_TestCase
                             if ( $as->i === 3 )
                             {
                                 $as->icheck = 4;
-                                $as->break_( 'MEDIUM' );
+                                $as->breakLoop( 'MEDIUM' );
                             }
                             
-                            $as->break_();
+                            $as->breakLoop();
                         }, "INNER2" );
                         
                         $as->loop( function( $as ) {
                             $as->s[] = "INNER3";
                             $as->i++;
-                            $as->break_( 'OUTER' );
+                            $as->breakLoop( 'OUTER' );
                         }, "INNER3" );
                         
                     }, "MEDIUM" );
